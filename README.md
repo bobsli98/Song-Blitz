@@ -14,6 +14,13 @@ Musik-Ratespiel für einen gemeinsamen Bildschirm (Laptop oder Tablet). Ein Song
 
 Die Client-ID kann auch fest in `index.html` bei `CONFIG.clientId` eingetragen werden.
 
+## Modi & Extras
+
+- **Reihum:** Jeder rät allein, etwa jede fünfte Runde ist eine Bonusrunde für alle.
+- **Duell:** Immer zwei Spieler gegeneinander mit eigenem Buzzer (Tasten = Spielernummer).
+- **Serien-Bonus:** Ab dem 3. Treffer in Folge +100, +200, max. +300 Extra-Punkte.
+- **Siegerehrung** mit Trommelwirbel, Podest und Auszeichnungen. Soundeffekte lassen sich oben über 🔊 ausschalten.
+
 ## Hinweise
 
 - Während ein Song läuft, zeigt das Spiel keinen Titel. Schliesst die Spotify-App auf anderen Geräten, sonst steht er dort.
