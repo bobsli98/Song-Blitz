@@ -217,6 +217,40 @@ h2{font-size:clamp(19px,3.2vw,25px)}
 .plph{background:var(--line);color:var(--muted)}
 .pln{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plc{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* Igel: rennen, einrollen, rollen, weiterrennen */
+.hog{position:absolute;bottom:6px;left:-15%;width:clamp(54px,9vw,70px);animation:hogmove 9s linear infinite}
+.hog.two{width:clamp(36px,6vw,46px);animation-delay:-4.5s;animation-duration:11s}
+.hog svg{display:block;width:100%;height:auto;overflow:visible}
+.hog *{transform-box:fill-box}
+.hog .open{animation:hogopen 9s steps(1) infinite}
+.hog .ball{transform-origin:50% 50%;animation:hogball 9s steps(1) infinite, hogroll 9s linear infinite}
+.hog.two .open,.hog.two .ball{animation-delay:-4.5s;animation-duration:11s}
+.hog .legs rect{transform-origin:50% 0;animation:scuttle .18s linear infinite alternate}
+.hog .legs .l2{animation-delay:-.09s}
+@keyframes hogmove{0%{left:-15%}30%{left:28%}38%{left:31%}68%{left:78%}100%{left:112%}}
+@keyframes hogopen{0%{opacity:1}30%{opacity:0}68%{opacity:1}}
+@keyframes hogball{0%{opacity:0}30%{opacity:1}68%{opacity:0}}
+@keyframes hogroll{0%,30%{transform:rotate(0) translateY(0)}34%{transform:rotate(120deg) translateY(-6px)}38%{transform:rotate(200deg) translateY(0)}68%{transform:rotate(1080deg) translateY(0)}100%{transform:rotate(1080deg)}}
+@keyframes scuttle{from{transform:rotate(-25deg)}to{transform:rotate(25deg)}}
+/* Bonusrunde */
+.stage.bonus{border-color:var(--hot);box-shadow:inset 0 0 0 2px var(--hot)}
+.stage.bonus>.eyebrow{color:color-mix(in srgb, var(--hot) 55%, var(--ink))}
+.clockrow{display:flex;align-items:baseline;justify-content:center;gap:16px;flex-wrap:wrap}
+.buzzers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.buzz{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px 12px;border-radius:16px;background:var(--hot);color:var(--hot-ink);
+  font-family:var(--f-display);font-weight:700;font-size:clamp(17px,2.6vw,21px);min-width:0;transition:transform .08s}
+.buzz span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.buzz:active{transform:scale(.97)}
+.buzz kbd{font-family:var(--f-mono);font-size:13px;padding:2px 7px;border-radius:6px;background:color-mix(in srgb, var(--hot-ink) 14%, transparent)}
+.buzz small{font-family:var(--f-body);font-size:13px;font-weight:600}
+.buzz:disabled{background:var(--line);color:var(--muted);cursor:default}
+.flash{margin:0;font-weight:600;color:var(--bad)}
+@media (prefers-reduced-motion:reduce){.hog,.hog *{animation:none!important}.hog{left:40%}.hog .ball{opacity:0}.hog.two{display:none}}
+.ani{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:24px;line-height:1;display:grid;place-items:center;transition:transform .12s}
+.ani:hover{transform:rotate(-8deg) scale(1.08);border-color:var(--accent)}
+.prow input::placeholder,.field input::placeholder{color:var(--muted);opacity:.75}
+.bigani{display:inline-block;animation:pop .5s ease-out}
 </style>
 </head>
 <body>
@@ -356,6 +390,29 @@ function confetti(n=140){
     if(now-t0<3500) confRaf=requestAnimationFrame(f); else c.clearRect(0,0,W,H);
   })(t0);
 }
+function spikes(cx,cy,rx,ry,a0,a1,n,k){
+  let d=""; const p=(ang,s)=>`${(cx+Math.cos(ang)*rx*s).toFixed(1)} ${(cy-Math.sin(ang)*ry*s).toFixed(1)}`;
+  for(let i=0;i<n;i++){ const a=(a0+(a1-a0)*(i+.5)/n)*Math.PI/180, w=(a1-a0)/n*.55*Math.PI/180;
+    d+=`M${p(a-w,.92)} L${p(a,k)} L${p(a+w,.92)}Z`; }
+  return d;
+}
+const HOG=`<svg viewBox="0 0 80 62" aria-hidden="true">
+  <ellipse cx="38" cy="60" rx="22" ry="2.5" fill="#000" opacity=".15"/>
+  <g class="open">
+    <g class="legs"><rect class="l1" x="20" y="50" width="6" height="9" rx="3" fill="#4a3526"/><rect class="l2" x="42" y="50" width="6" height="9" rx="3" fill="#4a3526"/></g>
+    <path d="${spikes(32,44,24.5,13,6,174,13,1.42)}" fill="#3b2a1f"/>
+    <ellipse cx="32" cy="44" rx="25" ry="13" fill="#6b4f3a"/>
+    <path d="M46 38 q14 -2 26 9 q-8 6 -24 6 q-6 -6 -2 -15z" fill="#e7c9a0"/>
+    <circle cx="72" cy="47" r="2.8" fill="#1a1a1a"/><circle cx="59" cy="43" r="2.1" fill="#1a1a1a"/><circle cx="59.6" cy="42.4" r=".7" fill="#fff"/>
+    <ellipse cx="52" cy="37" rx="3" ry="2.4" fill="#c9a77d"/>
+  </g>
+  <g class="ball">
+    <path d="${spikes(38,42,15,15,0,360,16,1.35)}" fill="#3b2a1f"/>
+    <circle cx="38" cy="42" r="15" fill="#6b4f3a"/>
+    <path d="M30 40 q8 -6 16 0" stroke="#4a3526" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="46" cy="47" r="2" fill="#1a1a1a"/>
+  </g>
+</svg>`;
 function floorHTML(){
   const art={duck:DUCK,turtle:TURTLE,anteater:ANTEATER,rocker:ROCKER};
   const cast=shuffle(["duck","turtle","anteater","duck","turtle"]).slice(0, window.innerWidth<480?2:4);
@@ -366,12 +423,14 @@ function floorHTML(){
     ${[[20,60],[45,30],[70,70],[85,40],[30,90]].map(([x,y],i)=>`<span class="spot" style="left:${x}%;top:${y}px;background:${SPOTCOL[i]};animation-delay:calc(var(--beat) * ${-i*.4})"></span>`).join("")}
     ${cast.map((c,i)=>`<div class="dancer ${c}${i%2?" off":""}">${art[c]}</div>`).join("")}
     <div class="dancer walker">${DUCK}</div>
+    <div class="hog">${HOG}</div><div class="hog two">${HOG}</div>
     ${[12,38,63,86].map((x,i)=>`<span class="notefly" style="left:${x}%;animation-delay:calc(var(--beat) * ${-i})">${i%2?"♫":"♪"}</span>`).join("")}
   </div>`;
 }
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const CHEERS=["Quak-tastisch!","Die Enten verneigen sich.","Der Ameisenbär streckt anerkennend die Zunge raus.","Sogar das Faultier ist kurz aufgewacht.","Der Rocker spielt dir ein Ehren-Solo.","Schildkröten-Applaus (langsam, aber ehrlich).","Ohrwurm-Profi!"];
-const FAILS=["Die Schildkröte zieht vor Scham den Kopf ein.","Dem Rocker ist vor Schreck eine Saite gerissen.","Die Enten schauen betreten weg.","Quak. Nein.","Knapp daneben ist auch vorbei."];
+const FAILS=["Die Schildkröte zieht vor Scham den Kopf ein.","Der Igel rollt sich vor Scham zusammen.","Dem Rocker ist vor Schreck eine Saite gerissen.","Die Enten schauen betreten weg.","Quak. Nein.","Knapp daneben ist auch vorbei."];
+const HOGQ=["Der Igel hat sich vor Schreck eingerollt."];
 const SLOW=["Die Schildkröte war schneller.","Die Enten sind eingeschlafen.","Selbst das Faultier hätte das erkannt."];
 function stopSong(){ if(master){ try{master.disconnect()}catch(e){} master=null; } }
 
@@ -537,10 +596,14 @@ const SP = {
 
 // ---------- Spielzustand ----------
 const defaultSource = "spotify";
-let S = { phase:"setup", players:SETTINGS.players||["Spieler 1","Spieler 2"], perPlayer:SETTINGS.perPlayer||5,
+const ANIMALS=["🦆","🐢","🦔","🦥","🐧","🐸","🦙","🦩","🐌","🦘"];
+const freeAnimal=used=>ANIMALS.find(a=>!used.includes(a))||ANIMALS[used.length%ANIMALS.length];
+const initPlayers=(SETTINGS.players||["",""]).map(n=>/^Spieler \d+$/.test(n)?"":n);
+const initAnimals=initPlayers.map((_,i)=>(SETTINGS.animals||[])[i]||ANIMALS[i%ANIMALS.length]);
+let S = { phase:"setup", players:initPlayers, animals:initAnimals, perPlayer:SETTINGS.perPlayer||5,
   source:SETTINGS.source||defaultSource, playlist:SETTINGS.playlist||"", clientId:SETTINGS.clientId||"" };
 function saveSettings(){
-  SETTINGS={...SETTINGS, players:S.players, perPlayer:S.perPlayer, source:S.source, playlist:S.playlist, clientId:S.clientId};
+  SETTINGS={...SETTINGS, players:S.players, animals:S.animals, perPlayer:S.perPlayer, source:S.source, playlist:S.playlist, clientId:S.clientId};
   LS.set("sb_settings", SETTINGS);
 }
 const app=document.getElementById("app");
@@ -550,16 +613,27 @@ const spotifyReady=()=> SP.songs.length>0 && !!SP.deviceId;
 const refresh=()=>{ if(S.phase==="setup") render(); };
 
 function startGame(){
-  const names=S.players.map(n=>n.trim()).filter(Boolean);
+  const names=S.players.map((n,i)=>n.trim()||`Spieler ${i+1}`);
   if(!names.length) return;
+  S.ani=S.animals.slice(0,names.length);
   if(S.source==="spotify" && !spotifyReady()) return;
   saveSettings();
-  const total=names.length*S.perPlayer, src=pool();
+  const regular=names.length*S.perPlayer, src=pool();
+  // Bonusrunden: etwa jede fünfte Runde, nie ganz am Anfang
+  const nb=Math.max(1, Math.round(regular/5));
+  const kinds=Array(regular).fill(false);
+  const slots=shuffle([...Array(Math.max(1,regular-1)).keys()].map(i=>i+2)).slice(0,nb).sort((a,b)=>b-a);
+  slots.forEach(pos=>kinds.splice(Math.min(pos,kinds.length),0,true));
+  const total=kinds.length;
   let deck=[]; while(deck.length<total) deck=deck.concat(shuffle(src));
-  S={...S, phase:"ready", names, scores:names.map(()=>0), best:names.map(()=>null), round:0, total, deck:deck.slice(0,total), err:null};
+  S={...S, phase:"ready", names, scores:names.map(()=>0), best:names.map(()=>null), round:0, turn:0, total,
+     deck:deck.slice(0,total), bonus:kinds, err:null};
   render();
 }
-const current=()=>S.round % S.names.length;
+const isBonus=()=>!!(S.bonus && S.bonus[S.round]);
+const current=()=>S.turn % S.names.length;
+const scorer=()=>isBonus() ? S.buzzer : current();
+const factor=()=>isBonus() ? 2 : 1;
 
 async function optionsFor(song){
   let cands=[];
@@ -574,8 +648,8 @@ async function optionsFor(song){
 
 async function play(){
   const song=S.deck[S.round];
-  S.optsP=optionsFor(song);
-  S.err=null;
+  S.optsP=optionsFor(song); S.opts=null;
+  S.err=null; S.locked=[]; S.wrongPicks=[]; S.buzzer=null; S.flash=null;
   if(S.source==="spotify"){
     S.phase="loading"; const p=SP.play(song); render();
     try{ await p }catch(e){ S.phase="ready"; S.err=e.message; render(); return; }
@@ -587,27 +661,43 @@ function tick(){
   S.t=(performance.now()-S.start)/1000;
   if(S.t>=MAX_T){ S.t=MAX_T; recognized(true); return; }
   const c=document.getElementById("clock"), w=document.getElementById("worth"), b=document.getElementById("barfill");
-  if(c){ c.textContent=S.t.toFixed(1); w.innerHTML=`gerade <b>${ptsFor(S.t)}</b> Punkte wert`; b.style.transform=`scaleX(${1-S.t/MAX_T})`; }
+  if(c){ c.textContent=S.t.toFixed(1); w.innerHTML=`gerade <b>${ptsFor(S.t)*factor()}</b> Punkte wert`; b.style.transform=`scaleX(${1-S.t/MAX_T})`; }
   raf=requestAnimationFrame(tick);
 }
-async function recognized(timeout=false){
+async function recognized(timeout=false, who=null){
   if(S.phase!=="playing") return;
+  if(isBonus() && !timeout && (who===null || S.locked.includes(who))) return;
   cancelAnimationFrame(raf); stopSong(); if(S.source==="spotify") SP.pause();
-  S.stopT=S.t; S.phase="wait";
-  S.opts=await S.optsP;
+  S.stopT=S.t; S.buzzer=who; S.phase="wait"; render();
+  if(!S.opts) S.opts=await S.optsP;
   if(timeout){ S.phase="reveal"; S.pick=null; S.timeout=true; S.gain=0; S.quip=pick(SLOW); render(); return; }
   S.timeout=false; S.phase="choose"; render();
 }
+function resumeBonus(){
+  const song=S.deck[S.round];
+  S.start=performance.now()-S.stopT*1000;
+  if(S.source==="spotify"){ try{ SP.player && SP.player.resume() }catch(e){} }
+  else S.bpm=playSong(song);
+  S.phase="playing"; render(); tick();
+}
 function choose(i){
-  if(S.phase!=="choose") return;
-  const song=S.deck[S.round], ok=S.opts[i]===song, p=current();
-  S.pick=i; S.gain= ok ? ptsFor(S.stopT) : 0;
+  if(S.phase!=="choose" || S.wrongPicks.includes(i)) return;
+  const song=S.deck[S.round], ok=S.opts[i]===song, p=scorer();
+  if(!ok && isBonus()){
+    S.locked.push(p); S.wrongPicks.push(i);
+    if(S.locked.length<S.names.length){
+      S.flash=`${S.names[p]} lag falsch und ist raus. Die anderen dürfen weiter raten!`;
+      resumeBonus(); return;
+    }
+  }
+  S.pick=i; S.gain= ok ? ptsFor(S.stopT)*factor() : 0;
   S.scores[p]+=S.gain; S.quip=pick(ok?CHEERS:FAILS);
-  if(ok) setTimeout(()=>confetti(S.gain>700?180:90),50);
+  if(ok) setTimeout(()=>confetti(S.gain>700?220:110),50);
   if(ok && (S.best[p]===null || S.stopT<S.best[p].t)) S.best[p]={t:S.stopT, title:song.title};
   S.phase="reveal"; render();
 }
 function next(){
+  if(!isBonus()) S.turn++;
   S.round++;
   S.phase = S.round>=S.total ? "end" : "ready";
   render();
@@ -615,12 +705,16 @@ function next(){
 }
 
 // ---------- Darstellung ----------
+function nextLabel(){
+  const nb=S.bonus[S.round+1], nt=isBonus()?S.turn:S.turn+1;
+  return nb ? "Weiter zur Bonusrunde" : `Weiter: ${esc(S.names[nt%S.names.length])} ist dran`;
+}
 function header(){
   const inGame=S.phase!=="setup";
   return `<div class="brand"><div class="disc" aria-hidden="true"></div><div>
     <div class="eyebrow">${inGame && S.phase!=="end" ? `Runde ${S.round+1} von ${S.total}` : "Musik-Ratespiel"}</div>
     <h1>Song-Blitz</h1></div></div>
-  ${inGame && S.phase!=="end" ? `<div class="scores">${S.names.map((n,i)=>`<div class="chip ${i===current()?"active":""}"><span>${esc(n)}</span><span class="pts">${S.scores[i]}</span></div>`).join("")}</div>` : ""}`;
+  ${inGame && S.phase!=="end" ? `<div class="scores">${S.names.map((n,i)=>`<div class="chip ${!isBonus()&&i===current()?"active":""}"><span>${S.ani[i]} ${esc(n)}</span><span class="pts">${S.scores[i]}</span></div>`).join("")}</div>` : ""}`;
 }
 
 function playlistPicker(){
@@ -671,7 +765,8 @@ function render(){
     html+=`<div class="setup"><div class="col"><div class="panel">
       <h2>Wer spielt mit?</h2>
       <div class="players">${S.players.map((n,i)=>`<div class="prow">
-        <input id="p${i}" value="${esc(n)}" aria-label="Name Spieler ${i+1}" data-i="${i}" maxlength="20">
+        <button class="ani" data-ani="${i}" aria-label="Anderes Tier für Spieler ${i+1}" title="Tier wechseln">${S.animals[i]}</button>
+        <input id="p${i}" value="${esc(n)}" placeholder="Spieler ${i+1}" aria-label="Name Spieler ${i+1}" data-i="${i}" maxlength="20" autocomplete="off">
         ${S.players.length>1?`<button class="icon-btn" data-del="${i}" aria-label="Spieler entfernen">×</button>`:""}</div>`).join("")}</div>
       ${S.players.length<8?`<button class="ghost" id="add">+ Spieler hinzufügen</button>`:""}
     </div>
@@ -686,52 +781,67 @@ function render(){
     <button class="big" id="go" ${blocked?"disabled":""}>Spiel starten</button>
     ${blocked?`<p class="muted" style="margin:0;text-align:center;font-size:14px">Verbinde Spotify und lade eure Playlist, dann geht's los.</p>`:""}`;
   }
+  else if(S.phase==="ready" && isBonus()){
+    html+=`<div class="panel stage bonus">
+      <div class="eyebrow">Bonusrunde</div>
+      <h2>Alle raten mit!</h2>
+      <p class="muted">Wer den Song erkennt, drückt auf seinen Namen${S.names.length<=9?` (oder Taste 1–${S.names.length})`:""}. Richtig gibt <b>doppelte Punkte</b>. Wer falsch liegt, ist für diese Runde raus und die anderen dürfen weiter raten.</p>
+      ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+      <button class="big hot" id="play">▶ Bonus-Song abspielen</button></div>`;
+  }
   else if(S.phase==="ready"){
     html+=`<div class="panel stage">
       <div class="eyebrow">Du bist dran</div>
-      <h2>${esc(S.names[current()])}</h2>
+      <h2><span class="bigani" aria-hidden="true">${S.ani[current()]}</span> ${esc(S.names[current()])}</h2>
       <p class="muted">Je schneller du den Song erkennst, desto mehr Punkte: 1000 am Anfang, nach ${MAX_T} Sekunden nur noch 100. Falsch geraten gibt 0.</p>
       ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
       <button class="big" id="play">▶ Song abspielen</button></div>`;
   }
   else if(S.phase==="loading"){
-    html+=`<div class="panel stage"><div class="eyebrow">${esc(S.names[current()])} macht sich bereit</div>
+    html+=`<div class="panel stage"><div class="eyebrow">${isBonus()?"Bonusrunde":esc(S.names[current()])+" macht sich bereit"}</div>
       <h2>Song wird geladen …</h2><p class="muted">Gleich geht's los. Ohren spitzen!</p></div>`;
   }
   else if(S.phase==="playing"){
-    html+=`<div class="panel stage">
-      <div class="eyebrow">${esc(S.names[current()])} hört zu</div>
+    const bz=isBonus();
+    html+=`<div class="panel stage ${bz?"bonus":""}">
+      <div class="eyebrow">${bz?"Bonusrunde · alle raten · doppelte Punkte":esc(S.names[current()])+" hört zu"}</div>
       ${floorHTML()}
-      <div class="clock" id="clock">0.0</div>
+      ${S.flash?`<p class="flash">${esc(S.flash)}</p>`:""}
+      <div class="clockrow"><div class="clock" id="clock">${(S.t||0).toFixed(1)}</div>
+        <div class="worth" id="worth">gerade <b>${ptsFor(S.t||0)*factor()}</b> Punkte wert</div></div>
       <div class="bar"><i id="barfill"></i></div>
-      <div class="worth" id="worth">gerade <b>1000</b> Punkte wert</div>
-      <button class="big hot" id="got">Erkannt!</button></div>`;
+      ${bz?`<div class="buzzers">${S.names.map((n,i)=>`<button class="buzz" data-buzz="${i}" ${S.locked.includes(i)?"disabled":""}>
+          ${i<9?`<kbd>${i+1}</kbd>`:""}<span>${S.ani[i]} ${esc(n)}</span>${S.locked.includes(i)?`<small>raus</small>`:""}</button>`).join("")}</div>`
+        :`<button class="big hot" id="got">Erkannt!</button>`}</div>`;
   }
   else if(S.phase==="wait"){
     html+=`<div class="panel stage"><div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s</div><h2>Antworten werden gemischt …</h2></div>`;
   }
   else if(S.phase==="choose"){
-    html+=`<div class="panel stage">
-      <div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s · ${ptsFor(S.stopT)} Punkte möglich</div>
-      <h2>Welcher Song war das?</h2>
-      <div class="options">${S.opts.map((o,i)=>`<button class="opt" data-opt="${i}">${esc(o.title)}</button>`).join("")}</div></div>`;
+    html+=`<div class="panel stage ${isBonus()?"bonus":""}">
+      <div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s · ${ptsFor(S.stopT)*factor()} Punkte möglich</div>
+      <h2>${isBonus()?`${S.ani[S.buzzer]} ${esc(S.names[S.buzzer])}, welcher Song war das?`:"Welcher Song war das?"}</h2>
+      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${S.wrongPicks.includes(i)?"wrong":""}" data-opt="${i}" ${S.wrongPicks.includes(i)?"disabled":""}>${esc(o.title)}</button>`).join("")}</div></div>`;
   }
   else if(S.phase==="reveal"){
-    const song=S.deck[S.round], ok=S.pick!==null && S.opts[S.pick]===song;
-    html+=`<div class="panel stage">
-      <div class="mood" aria-hidden="true">${ok?"🦆":"🐢"}</div>
-      <div class="verdict ${ok?"ok":"no"}">${S.timeout?"Zeit abgelaufen":ok?`+${S.gain} Punkte`:"Leider falsch · 0 Punkte"}</div>
+    const song=S.deck[S.round], ok=S.pick!==null && S.opts[S.pick]===song, bz=isBonus();
+    const verdict = S.timeout ? (bz?"Niemand hat's erkannt":"Zeit abgelaufen")
+      : ok ? (bz?`+${S.gain} Punkte für ${esc(S.names[S.buzzer])}`:`+${S.gain} Punkte`)
+      : (bz?"Alle lagen falsch":"Leider falsch · 0 Punkte");
+    html+=`<div class="panel stage ${bz?"bonus":""}">
+      <div class="mood" aria-hidden="true">${ok?"🦆":"🦔"}</div>
+      <div class="verdict ${ok?"ok":"no"}">${verdict}</div>
       <p class="muted" style="margin:0">${esc(S.quip)}</p>
-      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":i===S.pick?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
+      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":(i===S.pick||S.wrongPicks.includes(i))?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
       <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
         <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
-      <button class="big" id="next">${S.round+1>=S.total?"Zur Rangliste":`Weiter: ${esc(S.names[(S.round+1)%S.names.length])} ist dran`}</button></div>`;
+      <button class="big" id="next">${S.round+1>=S.total?"Zur Rangliste":nextLabel()}</button></div>`;
   }
   else if(S.phase==="end"){
-    const order=S.names.map((n,i)=>({n,s:S.scores[i],b:S.best[i]})).sort((a,b)=>b.s-a.s);
-    html+=`<div class="stage"><div class="eyebrow">Nach ${S.total} Runden</div><h2>${esc(order[0].n)} gewinnt!</h2></div>
+    const order=S.names.map((n,i)=>({n,a:S.ani[i],s:S.scores[i],b:S.best[i]})).sort((a,b)=>b.s-a.s);
+    html+=`<div class="stage"><div class="eyebrow">Nach ${S.total} Runden</div><h2>${order[0].a} ${esc(order[0].n)} gewinnt!</h2></div>
       <ol class="rank">${order.map((o,i)=>`<li><span class="pos">${i+1}</span>
-        <span class="name">${esc(o.n)}<br><span class="muted" style="font-weight:500;font-size:14px">${o.b?`Schnellster Treffer: ${o.b.t.toFixed(1)} s (${esc(o.b.title)})`:"Kein Treffer"}</span></span>
+        <span class="name">${o.a} ${esc(o.n)}<br><span class="muted" style="font-weight:500;font-size:14px">${o.b?`Schnellster Treffer: ${o.b.t.toFixed(1)} s (${esc(o.b.title)})`:"Kein Treffer"}</span></span>
         <span class="pts">${o.s}</span></li>`).join("")}</ol>
       <button class="big" id="again">Nochmal spielen</button>
       <button class="ghost" id="setup" style="align-self:center">Spieler ändern</button>`;
@@ -744,8 +854,11 @@ function render(){
 function bind(){
   const $=id=>document.getElementById(id), on=(id,f)=>{ const e=$(id); if(e) e.onclick=f; };
   app.querySelectorAll(".prow input").forEach(inp=>inp.addEventListener("input",e=>{ S.players[+e.target.dataset.i]=e.target.value; saveSettings(); }));
-  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ S.players.splice(+b.dataset.del,1); saveSettings(); render(); });
-  on("add",()=>{ S.players.push(`Spieler ${S.players.length+1}`); render(); $(`p${S.players.length-1}`)?.select(); });
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ S.players.splice(+b.dataset.del,1); S.animals.splice(+b.dataset.del,1); saveSettings(); render(); });
+  app.querySelectorAll("[data-ani]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.ani, others=S.animals.filter((_,j)=>j!==i);
+    let k=ANIMALS.indexOf(S.animals[i]); do{ k=(k+1)%ANIMALS.length }while(others.includes(ANIMALS[k]) && others.length<ANIMALS.length-1);
+    S.animals[i]=ANIMALS[k]; saveSettings(); render(); });
+  on("add",()=>{ S.players.push(""); S.animals.push(freeAnimal(S.animals)); saveSettings(); render(); $(`p${S.players.length-1}`)?.focus(); });
   on("minus",()=>{ S.perPlayer=Math.max(1,S.perPlayer-1); render(); });
   on("plus",()=>{ S.perPlayer=Math.min(20,S.perPlayer+1); render(); });
   $("cid")&&$("cid").addEventListener("input",e=>{ S.clientId=e.target.value.trim(); saveSettings(); });
@@ -762,12 +875,17 @@ function bind(){
   on("go",startGame);
   on("play",play);
   on("got",()=>recognized(false));
+  app.querySelectorAll("[data-buzz]").forEach(b=>b.onclick=()=>recognized(false,+b.dataset.buzz));
   app.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>choose(+b.dataset.opt));
   on("next",next);
-  on("again",()=>{ S.players=[...S.names]; startGame(); });
-  on("setup",()=>{ S={...S, phase:"setup", players:[...S.names]}; render(); });
+  on("again",()=>startGame());
+  on("setup",()=>{ S={...S, phase:"setup"}; render(); });
 }
-document.addEventListener("keydown",e=>{ if(e.code==="Space" && S.phase==="playing"){ e.preventDefault(); recognized(false); } });
+document.addEventListener("keydown",e=>{
+  if(S.phase!=="playing" || e.target.tagName==="INPUT") return;
+  if(isBonus()){ const n=parseInt(e.key,10); if(n>=1 && n<=S.names.length){ e.preventDefault(); recognized(false,n-1); } }
+  else if(e.code==="Space"){ e.preventDefault(); recognized(false); }
+});
 
 (async()=>{
   try{ await SP.handleRedirect() }catch(e){ SP.authMsg=e.message }
