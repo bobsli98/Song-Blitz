@@ -361,6 +361,10 @@ body.ingame .snd{margin-left:8px}
 .floor.frenzy::after{content:"🚨 Panik!";position:absolute;top:8px;right:10px;font-weight:800;font-size:13px;color:var(--bad);animation:blinkp .5s steps(1) infinite}
 @keyframes blinkp{50%{opacity:.2}}
 @media (prefers-reduced-motion:reduce){.penguin,.penguin *,.flamingo,.flamingo *,.joiner,.frog,.conga,.duckling,.slider,.floor.frenzy::after{animation:none!important}.joiner{display:none}}
+.av{display:inline-block;width:1.25em;height:1.25em;vertical-align:-0.28em;line-height:0}
+.av-wide{width:1.7em}
+.av svg{width:100%;height:100%;display:block;overflow:visible}
+.ani .av{width:28px;height:28px}.ani .av-wide{width:34px}
 </style>
 </head>
 <body>
@@ -743,7 +747,10 @@ const SP = {
 
 // ---------- Spielzustand ----------
 const defaultSource = "spotify";
-const ANIMALS=["🦆","🐢","🦔","🦥","🐧","🐸","🦙","🦩","🐌","🦘"];
+const ANIMALS=["🦆","🐢","🦔","🦥","anteater","🐧","🐸","🦙","🦩","rocker","🐌","🦘"];
+// Eigene Figuren ohne Emoji (Ameisenbär, Rocker) werden als kleine Zeichnung angezeigt
+const AV=a=> a==="anteater" ? `<span class="av av-wide" role="img" aria-label="Ameisenbär">${ANTEATER}</span>`
+  : a==="rocker" ? `<span class="av" role="img" aria-label="Rocker">${ROCKER}</span>` : a;
 const freeAnimal=used=>ANIMALS.find(a=>!used.includes(a))||ANIMALS[used.length%ANIMALS.length];
 const initPlayers=(SETTINGS.players||["",""]).map(n=>/^Spieler \d+$/.test(n)?"":n);
 const initAnimals=initPlayers.map((_,i)=>(SETTINGS.animals||[])[i]||ANIMALS[i%ANIMALS.length]);
@@ -819,7 +826,7 @@ function startGame(){
   const names=S.players.map((n,i)=>n.trim()||`Spieler ${i+1}`);
   if(!names.length) return;
   if(S.source==="spotify" && !spotifyReady()) return;
-  S.ani=S.animals.slice(0,names.length);
+  S.ani=S.animals.slice(0,names.length).map(AV);
   saveSettings();
   let kinds, pairs=[];
   if(S.mode==="duel" && names.length>=2){
@@ -932,7 +939,7 @@ function choose(i){
     }
   }
   S.pick=i; S.gain= ok ? ptsFor(S.stopT)*(doubled?2:1) : 0;
-  if(!ok && doubled){ S.scores[p]-=DOUBLE_RISK; setTimeout(()=>toast("🎲",`Zu hoch gepokert! ${S.names[p]} verliert ${DOUBLE_RISK}`),400); }
+  if(!ok && doubled){ S.scores[p]-=DOUBLE_RISK; setTimeout(()=>toast("🎲",`Zu hoch gepokert! ${S.ani[p]} ${esc(S.names[p])} verliert ${DOUBLE_RISK}`),400); }
   if(ok){
     st.right++; st.times.push(S.stopT);
     S.streak[p]++; st.maxStreak=Math.max(st.maxStreak,S.streak[p]);
@@ -942,7 +949,7 @@ function choose(i){
   }
   S.scores[p]+=S.gain+S.streakGain;
   if(ok){ // Abzeichen
-    const nm=`${S.ani[p]} ${S.names[p]}`;
+    const nm=`${S.ani[p]} ${esc(S.names[p])}`;
     if(S.stopT<2) badge(p,"⚡","Blitzstart",`${nm} in ${S.stopT.toFixed(1)} s!`);
     if(S.stopT>25) badge(p,"🧊","Eiskalt",`${nm} kurz vor Schluss!`);
     if(S.streak[p]===3) badge(p,"🎩","Hattrick",`${nm}: drei in Folge!`);
@@ -950,7 +957,7 @@ function choose(i){
     if(doubled) badge(p,"🎲","Mutig belohnt",`${nm} verdoppelt!`);
   }
   const lead=leader();
-  if(lead!==null && lead!==leaderBefore && S.round>0) setTimeout(()=>toast("👑",`Führungswechsel! ${S.ani[lead]} ${S.names[lead]} führt`),900);
+  if(lead!==null && lead!==leaderBefore && S.round>0) setTimeout(()=>toast("👑",`Führungswechsel! ${S.ani[lead]} ${esc(S.names[lead])} führt`),900);
   S.quip=pick(ok?CHEERS:FAILS); S.reactor=p; S.happy=ok;
   SFX.play(ok ? (S.streakGain?"fire":"right") : "wrong");
   S.phase="reveal"; render(); setTimeout(()=>{ if(S.phase==="reveal") resumeMusic(); },700);
@@ -972,7 +979,7 @@ function toast(icon,text){
   let box=document.getElementById("toasts");
   if(!box){ box=document.createElement("div"); box.id="toasts"; box.setAttribute("aria-live","polite"); document.body.appendChild(box); }
   const t=document.createElement("div"); t.className="toast";
-  t.innerHTML=`<span class="ti" aria-hidden="true">${icon}</span><span>${esc(text)}</span>`;
+  t.innerHTML=`<span class="ti" aria-hidden="true">${icon}</span><span>${text}</span>`;   // Text ist bereits HTML-sicher
   box.appendChild(t); SFX.play("ding");
   setTimeout(()=>t.classList.add("out"),2800); setTimeout(()=>t.remove(),3300);
 }
@@ -1092,7 +1099,7 @@ function render(){
     html+=`<div class="setup"><div class="col"><div class="panel">
       <h2>Wer spielt mit?</h2>
       <div class="players">${S.players.map((n,i)=>`<div class="prow">
-        <button class="ani" data-ani="${i}" aria-label="Anderes Tier für Spieler ${i+1}" title="Tier wechseln">${S.animals[i]}</button>
+        <button class="ani" data-ani="${i}" aria-label="Anderes Tier für Spieler ${i+1}" title="Tier wechseln">${AV(S.animals[i])}</button>
         <input id="p${i}" value="${esc(n)}" placeholder="Spieler ${i+1}" aria-label="Name Spieler ${i+1}" data-i="${i}" maxlength="20" autocomplete="off">
         ${S.players.length>1?`<button class="icon-btn" data-del="${i}" aria-label="Spieler entfernen">×</button>`:""}</div>`).join("")}</div>
       ${S.players.length<8?`<button class="ghost" id="add">+ Spieler hinzufügen</button>`:""}
