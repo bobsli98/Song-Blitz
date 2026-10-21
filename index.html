@@ -367,7 +367,7 @@ const SLOW=["Die Schildkröte war schneller.","Die Enten sind eingeschlafen.","S
 function stopSong(){ if(master){ try{master.disconnect()}catch(e){} master=null; } }
 
 // ---------- Einstellungen & Hilfsfunktionen ----------
-const CONFIG = { clientId: "" };   // Spotify Client-ID kann hier fest eingetragen werden
+const CONFIG = { clientId: "16262fe43e5748e3883b594a9840b3fc" };   // Spotify Client-ID kann hier fest eingetragen werden
 const SCOPES = "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative";
 const LS = {
   get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v) }catch(e){ return d } },
