@@ -365,6 +365,14 @@ body.ingame .snd{margin-left:8px}
 .av-wide{width:1.7em}
 .av svg{width:100%;height:100%;display:block;overflow:visible}
 .ani .av{width:28px;height:28px}.ani .av-wide{width:34px}
+.av *{transform-box:fill-box}
+.av .tongue{transform-origin:100% 50%;transform:scaleX(0)}
+/* Ameisenbär-Reaktion: Zunge raus! */
+.react.happy .av .tongue,.pani.happy .av .tongue{animation:lick2 .45s ease-in-out infinite}
+.react.sad .av .tongue{transform:scaleX(.8) rotate(-25deg)}
+.react.sleepy .av .tongue{animation:lick2 2.8s ease-in-out infinite}
+@keyframes lick2{0%,100%{transform:scaleX(0)}45%,60%{transform:scaleX(1.6)}}
+@media (prefers-reduced-motion:reduce){.av .tongue{animation:none!important}}
 </style>
 </head>
 <body>
