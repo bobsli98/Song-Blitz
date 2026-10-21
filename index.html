@@ -633,7 +633,7 @@ function startGame(){
 const isBonus=()=>!!(S.bonus && S.bonus[S.round]);
 const current=()=>S.turn % S.names.length;
 const scorer=()=>isBonus() ? S.buzzer : current();
-const factor=()=>isBonus() ? 2 : 1;
+const factor=()=>1;
 
 async function optionsFor(song){
   let cands=[];
@@ -785,7 +785,7 @@ function render(){
     html+=`<div class="panel stage bonus">
       <div class="eyebrow">Bonusrunde</div>
       <h2>Alle raten mit!</h2>
-      <p class="muted">Wer den Song erkennt, drückt auf seinen Namen${S.names.length<=9?` (oder Taste 1–${S.names.length})`:""}. Richtig gibt <b>doppelte Punkte</b>. Wer falsch liegt, ist für diese Runde raus und die anderen dürfen weiter raten.</p>
+      <p class="muted">Wer den Song erkennt, drückt auf seinen Namen${S.names.length<=9?` (oder Taste 1–${S.names.length})`:""}. Je schneller, desto mehr Punkte, wie in den normalen Runden. Wer falsch liegt, ist für diese Runde raus und die anderen dürfen weiter raten.</p>
       ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
       <button class="big hot" id="play">▶ Bonus-Song abspielen</button></div>`;
   }
@@ -804,7 +804,7 @@ function render(){
   else if(S.phase==="playing"){
     const bz=isBonus();
     html+=`<div class="panel stage ${bz?"bonus":""}">
-      <div class="eyebrow">${bz?"Bonusrunde · alle raten · doppelte Punkte":esc(S.names[current()])+" hört zu"}</div>
+      <div class="eyebrow">${bz?"Bonusrunde · alle raten":esc(S.names[current()])+" hört zu"}</div>
       ${floorHTML()}
       ${S.flash?`<p class="flash">${esc(S.flash)}</p>`:""}
       <div class="clockrow"><div class="clock" id="clock">${(S.t||0).toFixed(1)}</div>
