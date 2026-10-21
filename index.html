@@ -251,6 +251,16 @@ h2{font-size:clamp(19px,3.2vw,25px)}
 .ani:hover{transform:rotate(-8deg) scale(1.08);border-color:var(--accent)}
 .prow input::placeholder,.field input::placeholder{color:var(--muted);opacity:.75}
 .bigani{display:inline-block;animation:pop .5s ease-out}
+.revhead{display:flex;align-items:center;justify-content:center;gap:14px;text-align:left}
+.revgrid{display:grid;gap:12px}
+@media (min-width:860px){.revgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);align-items:center}
+  .revgrid .opt{padding:10px 12px;font-size:15px}}
+@media (max-height:720px){.app{padding-block:8px 12px;gap:10px}.panel{padding:14px;gap:10px}.stage{gap:10px}
+  .opt{padding:10px 12px}.big{padding:12px}.big.hot{padding:14px}.clock{font-size:clamp(40px,9vh,64px)}}
+/* Im Spiel: alles mittig */
+body.ingame .app{justify-content:center;max-width:860px}
+body.ingame .brand,body.ingame .scores{justify-content:center}
+body.ingame .brand{text-align:left}
 </style>
 </head>
 <body>
@@ -759,6 +769,7 @@ function musicPanel(){
 function render(){
   const a=document.activeElement, fid=a&&a.id&&a.tagName==="INPUT"?a.id:null, sel=fid?a.selectionStart:null;
   document.body.classList.toggle("playing", S.phase==="playing"||S.phase==="loading");
+  document.body.classList.toggle("ingame", S.phase!=="setup");
   let html=header();
   if(S.phase==="setup"){
     const blocked = S.source==="spotify" && !spotifyReady();
@@ -829,12 +840,14 @@ function render(){
       : ok ? (bz?`+${S.gain} Punkte für ${esc(S.names[S.buzzer])}`:`+${S.gain} Punkte`)
       : (bz?"Alle lagen falsch":"Leider falsch · 0 Punkte");
     html+=`<div class="panel stage ${bz?"bonus":""}">
-      <div class="mood" aria-hidden="true">${ok?"🦆":"🦔"}</div>
-      <div class="verdict ${ok?"ok":"no"}">${verdict}</div>
-      <p class="muted" style="margin:0">${esc(S.quip)}</p>
-      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":(i===S.pick||S.wrongPicks.includes(i))?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
-      <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
-        <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
+      <div class="revhead"><div class="mood" aria-hidden="true">${ok?"🦆":"🦔"}</div><div>
+        <div class="verdict ${ok?"ok":"no"}">${verdict}</div>
+        <p class="muted" style="margin:0">${esc(S.quip)}</p></div></div>
+      <div class="revgrid">
+        <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
+          <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
+        <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":(i===S.pick||S.wrongPicks.includes(i))?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
+      </div>
       <button class="big" id="next">${S.round+1>=S.total?"Zur Rangliste":nextLabel()}</button></div>`;
   }
   else if(S.phase==="end"){
