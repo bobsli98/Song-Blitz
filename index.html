@@ -333,6 +333,34 @@ body.ingame .snd{margin-left:8px}
 .famehead{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .famerow{display:flex;gap:8px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){.toast,.joker.armed,.record{animation:none}}
+/* Mehr Chaos auf der Tanzfläche */
+.penguin{width:clamp(40px,7vw,52px);animation:pwaddle calc(var(--beat) / 2) ease-in-out infinite alternate}
+.penguin .wl{transform-origin:100% 0;animation:pflap calc(var(--beat) / 2) ease-in-out infinite alternate}
+.penguin .wr{transform-origin:0 0;animation:pflap2 calc(var(--beat) / 2) ease-in-out infinite alternate}
+@keyframes pwaddle{from{transform:rotate(-12deg)}to{transform:rotate(12deg) translateY(-4px)}}
+@keyframes pflap{from{transform:rotate(0)}to{transform:rotate(40deg)}}
+@keyframes pflap2{from{transform:rotate(0)}to{transform:rotate(-40deg)}}
+.flamingo{width:clamp(38px,6.5vw,50px);animation:sway calc(var(--beat) * 2) ease-in-out infinite alternate}
+.flamingo .neck{transform-origin:0% 100%;animation:fnod var(--beat) ease-in-out infinite alternate}
+@keyframes fnod{from{transform:rotate(-14deg)}to{transform:rotate(16deg)}}
+.joiner{position:absolute;inset:0;pointer-events:none;animation:join .6s cubic-bezier(.2,.9,.3,1.4) var(--in) both}
+@keyframes join{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.frog{position:absolute;bottom:8px;left:-10%;width:clamp(40px,6vw,52px);animation:frogx 11s linear infinite, hop var(--beat) cubic-bezier(.3,0,.7,1) infinite}
+.frog.two{animation-duration:8s,calc(var(--beat) / 2);animation-direction:reverse,normal;width:clamp(30px,4.5vw,40px)}
+.frog svg,.slider svg,.duckling svg{display:block;width:100%;height:auto;overflow:visible}
+.frog *{transform-box:fill-box}
+@keyframes frogx{from{left:-10%}to{left:105%}}
+@keyframes hop{0%,100%{transform:translateY(0) scale(1.1,.85)}15%{transform:translateY(0) scale(1)}50%{transform:translateY(-46px) rotate(-8deg)}85%{transform:translateY(0) scale(1)}}
+.conga{position:absolute;bottom:10px;left:0;display:flex;gap:2px;animation:congax 13s linear infinite}
+.duckling{width:clamp(22px,3.4vw,30px);animation:bop calc(var(--beat) / 2) ease-in-out infinite alternate}
+.duckling *{transform-box:fill-box}
+@keyframes congax{from{translate:-180px 0}to{translate:calc(min(860px,100vw)) 0}}
+.slider{position:absolute;bottom:4px;left:-15%;width:clamp(36px,6vw,48px);animation:slide 6s cubic-bezier(.3,.1,.4,1) infinite}
+@keyframes slide{0%{left:-15%;transform:rotate(0)}15%{transform:rotate(-80deg) translateX(-10px)}85%{transform:rotate(-80deg) translateX(-10px)}100%{left:110%;transform:rotate(-80deg)}}
+.floor.frenzy{background:linear-gradient(to top, color-mix(in srgb, var(--bad) 30%, var(--bg)) 0 22px, color-mix(in srgb, var(--bad) 8%, var(--bg)) 22px)}
+.floor.frenzy::after{content:"🚨 Panik!";position:absolute;top:8px;right:10px;font-weight:800;font-size:13px;color:var(--bad);animation:blinkp .5s steps(1) infinite}
+@keyframes blinkp{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.penguin,.penguin *,.flamingo,.flamingo *,.joiner,.frog,.conga,.duckling,.slider,.floor.frenzy::after{animation:none!important}.joiner{display:none}}
 </style>
 </head>
 <body>
@@ -495,9 +523,42 @@ const HOG=`<svg viewBox="0 0 80 62" aria-hidden="true">
     <circle cx="46" cy="47" r="2" fill="#1a1a1a"/>
   </g>
 </svg>`;
+const PENGUIN=`<svg viewBox="0 0 50 64" aria-hidden="true">
+  <ellipse cx="25" cy="62" rx="14" ry="2.5" fill="#000" opacity=".15"/>
+  <path d="M14 57 h9 l-2 5 h-7z M27 57 h9 l-2 5 h-7z" fill="#f59f00"/>
+  <g class="wl"><path d="M10 30 q-9 10 -5 21 q5 -6 7 -14z" fill="#1f2433"/></g>
+  <g class="wr"><path d="M40 30 q9 10 5 21 q-5 -6 -7 -14z" fill="#1f2433"/></g>
+  <ellipse cx="25" cy="37" rx="16" ry="22" fill="#1f2433"/>
+  <ellipse cx="25" cy="42" rx="10.5" ry="16" fill="#f4f4f0"/>
+  <circle cx="19" cy="22" r="2.4" fill="#fff"/><circle cx="31" cy="22" r="2.4" fill="#fff"/>
+  <circle cx="19.6" cy="22.5" r="1.2" fill="#111"/><circle cx="30.4" cy="22.5" r="1.2" fill="#111"/>
+  <path d="M21 27 l4 5 l4 -5z" fill="#f59f00"/>
+  <ellipse cx="15" cy="29" rx="2.5" ry="1.4" fill="#ff8fa3" opacity=".7"/><ellipse cx="35" cy="29" rx="2.5" ry="1.4" fill="#ff8fa3" opacity=".7"/>
+</svg>`;
+const FROG=`<svg viewBox="0 0 60 44" aria-hidden="true">
+  <ellipse cx="30" cy="42" rx="18" ry="2" fill="#000" opacity=".15"/>
+  <path d="M10 37 q-8 5 1 5 h10z M50 37 q8 5 -1 5 h-10z" fill="#4c9a2a"/>
+  <ellipse cx="30" cy="30" rx="20" ry="12" fill="#6cc04a"/>
+  <ellipse cx="30" cy="34" rx="12" ry="6" fill="#c7e9a8"/>
+  <circle cx="20" cy="18" r="7" fill="#6cc04a"/><circle cx="40" cy="18" r="7" fill="#6cc04a"/>
+  <circle cx="20" cy="17" r="4" fill="#fff"/><circle cx="40" cy="17" r="4" fill="#fff"/>
+  <circle cx="21" cy="17.5" r="2" fill="#111"/><circle cx="39" cy="17.5" r="2" fill="#111"/>
+  <path d="M22 27 q8 6 16 0" stroke="#2f6b1c" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>`;
+const FLAMINGO=`<svg viewBox="0 0 50 90" aria-hidden="true">
+  <ellipse cx="25" cy="88" rx="10" ry="2" fill="#000" opacity=".15"/>
+  <line x1="24" y1="56" x2="24" y2="88" stroke="#e8749a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M24 66 l9 -5 l-1 9" stroke="#e8749a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 47 q-7 -3 -8 4 q6 3 10 0z" fill="#ff6f9c"/>
+  <ellipse cx="22" cy="50" rx="15" ry="9" fill="#ff8fb1"/>
+  <path d="M16 48 q8 -4 14 2" stroke="#ff6f9c" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <g class="neck"><path d="M33 47 q9 -10 1 -22 q-7 -10 4 -16" stroke="#ff8fb1" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <circle cx="39" cy="9" r="6" fill="#ff8fb1"/><circle cx="41" cy="8" r="1.4" fill="#111"/>
+    <path d="M44 8 q7 1 5 8 l-3 -4z" fill="#2a2a2a"/></g>
+</svg>`;
 function floorHTML(){
-  const art={duck:DUCK,turtle:TURTLE,anteater:ANTEATER,rocker:ROCKER};
-  const cast=shuffle(["duck","turtle","anteater","duck","turtle"]).slice(0, window.innerWidth<480?2:4);
+  const art={duck:DUCK,turtle:TURTLE,anteater:ANTEATER,rocker:ROCKER,penguin:PENGUIN,flamingo:FLAMINGO};
+  const cast=shuffle(["duck","turtle","anteater","penguin","flamingo","duck","penguin"]).slice(0, window.innerWidth<480?3:5);
   cast.splice(Math.floor(cast.length/2),0,"rocker");
   return `<div class="floor" style="--beat:${(60/S.bpm).toFixed(3)}s" aria-hidden="true">
     <div class="branch"></div><div class="sloth">${SLOTH}</div>
@@ -506,6 +567,10 @@ function floorHTML(){
     ${cast.map((c,i)=>`<div class="dancer ${c}${i%2?" off":""}">${art[c]}</div>`).join("")}
     <div class="dancer walker">${DUCK}</div>
     <div class="hog">${HOG}</div><div class="hog two">${HOG}</div>
+    <div class="joiner" style="--in:4s"><div class="frog">${FROG}</div></div>
+    <div class="joiner" style="--in:9s"><div class="conga">${[0,1,2,3,4].map(i=>`<div class="duckling" style="animation-delay:calc(var(--beat) * ${-i*.25})">${DUCK}</div>`).join("")}</div></div>
+    <div class="joiner" style="--in:14s"><div class="slider">${PENGUIN}</div></div>
+    <div class="joiner" style="--in:18s"><div class="frog two">${FROG}</div></div>
     ${[12,38,63,86].map((x,i)=>`<span class="notefly" style="left:${x}%;animation-delay:calc(var(--beat) * ${-i})">${i%2?"♫":"♪"}</span>`).join("")}
   </div>`;
 }
@@ -806,12 +871,13 @@ async function play(){
     try{ await p }catch(e){ S.phase="ready"; S.err=e.message; render(); return; }
     S.bpm=100+Math.floor(Math.random()*40);
   } else S.bpm=playSong(song);
-  S.phase="playing"; S.t=0; S.start=performance.now(); render(); tick();
+  S.phase="playing"; S.t=0; S.frenzy=false; S.start=performance.now(); render(); tick();
 }
 function tick(){
   S.t=(performance.now()-S.start)/1000;
   if(S.t>=MAX_T){ S.t=MAX_T; recognized(true); return; }
   const c=document.getElementById("clock"), w=document.getElementById("worth"), b=document.getElementById("barfill");
+  if(S.t>20 && !S.frenzy){ const f=document.querySelector(".floor"); if(f){ S.frenzy=true; f.classList.add("frenzy"); f.style.setProperty("--beat",(60/S.bpm*0.55).toFixed(3)+"s"); } }
   if(c){ c.textContent=S.t.toFixed(1); w.innerHTML=`gerade <b>${ptsFor(S.t)}</b> Punkte wert`; b.style.transform=`scaleX(${1-S.t/MAX_T})`; }
   raf=requestAnimationFrame(tick);
 }
@@ -841,7 +907,7 @@ function stopMusic(){
 }
 function resumeBonus(){
   const song=S.deck[S.round];
-  S.start=performance.now()-S.stopT*1000;
+  S.start=performance.now()-S.stopT*1000; S.frenzy=false;
   if(S.source==="spotify"){ try{ SP.player && SP.player.resume() }catch(e){} }
   else S.bpm=playSong(song);
   S.phase="playing"; render(); tick();
