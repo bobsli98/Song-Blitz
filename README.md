@@ -17,5 +17,5 @@ Die Client-ID kann auch fest in `index.html` bei `CONFIG.clientId` eingetragen w
 ## Hinweise
 
 - Während ein Song läuft, zeigt das Spiel keinen Titel. Schliesst die Spotify-App auf anderen Geräten, sonst steht er dort.
-- Etwa jede fünfte Runde ist eine Bonusrunde: Alle raten mit (Buttons oder Tasten 1–9), Punkte wie in normalen Runden, wer falsch liegt, ist raus.
+- Etwa jede fünfte Runde ist eine Bonusrunde: Alle raten mit (Buttons oder Tasten 1–9), Punkte wie in normalen Runden. Wer falsch liegt, verliert 200 Punkte und ist raus, alle anderen bekommen 100.
 - Ohne Spotify gibt es einen Demo-Modus mit erfundenen Melodien.

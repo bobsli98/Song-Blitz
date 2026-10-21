@@ -644,6 +644,7 @@ const isBonus=()=>!!(S.bonus && S.bonus[S.round]);
 const current=()=>S.turn % S.names.length;
 const scorer=()=>isBonus() ? S.buzzer : current();
 const factor=()=>1;
+const BONUS_PENALTY=200, BONUS_GIFT=100;
 
 async function optionsFor(song){
   let cands=[];
@@ -695,10 +696,14 @@ function choose(i){
   const song=S.deck[S.round], ok=S.opts[i]===song, p=scorer();
   if(!ok && isBonus()){
     S.locked.push(p); S.wrongPicks.push(i);
-    if(S.locked.length<S.names.length){
-      S.flash=`${S.names[p]} lag falsch und ist raus. Die anderen dürfen weiter raten!`;
-      resumeBonus(); return;
-    }
+    // Strafe für zu schnelles Drücken: Punkte weg, die anderen bekommen etwas
+    S.scores[p]-=BONUS_PENALTY;
+    const others=S.names.map((_,j)=>j).filter(j=>!S.locked.includes(j));
+    others.forEach(j=>S.scores[j]+=BONUS_GIFT);
+    const who=others.map(j=>S.names[j]);
+    const giftTxt=who.length ? ` ${who.length===1?who[0]+" bekommt":who.join(", ")+" bekommen je"} +${BONUS_GIFT}.` : "";
+    S.flash=`${S.names[p]} lag falsch: −${BONUS_PENALTY} Punkte.${giftTxt}`;
+    if(others.length){ S.flash+=" Weiter raten!"; resumeBonus(); return; }
   }
   S.pick=i; S.gain= ok ? ptsFor(S.stopT)*factor() : 0;
   S.scores[p]+=S.gain; S.quip=pick(ok?CHEERS:FAILS);
@@ -796,7 +801,7 @@ function render(){
     html+=`<div class="panel stage bonus">
       <div class="eyebrow">Bonusrunde</div>
       <h2>Alle raten mit!</h2>
-      <p class="muted">Wer den Song erkennt, drückt auf seinen Namen${S.names.length<=9?` (oder Taste 1–${S.names.length})`:""}. Je schneller, desto mehr Punkte, wie in den normalen Runden. Wer falsch liegt, ist für diese Runde raus und die anderen dürfen weiter raten.</p>
+      <p class="muted">Wer den Song erkennt, drückt auf seinen Namen${S.names.length<=9?` (oder Taste 1–${S.names.length})`:""}. Je schneller, desto mehr Punkte. Aber Vorsicht: Wer falsch liegt, verliert ${BONUS_PENALTY} Punkte und ist raus. Alle anderen bekommen ${BONUS_GIFT} und raten weiter.</p>
       ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
       <button class="big hot" id="play">▶ Bonus-Song abspielen</button></div>`;
   }
@@ -842,7 +847,7 @@ function render(){
     html+=`<div class="panel stage ${bz?"bonus":""}">
       <div class="revhead"><div class="mood" aria-hidden="true">${ok?"🦆":"🦔"}</div><div>
         <div class="verdict ${ok?"ok":"no"}">${verdict}</div>
-        <p class="muted" style="margin:0">${esc(S.quip)}</p></div></div>
+        <p class="muted" style="margin:0">${esc(S.quip)}</p>${bz&&S.locked.length?`<p class="flash" style="font-size:14px">${S.locked.map(j=>`${S.ani[j]} ${esc(S.names[j])} −${BONUS_PENALTY}`).join(" · ")}</p>`:""}</div></div>
       <div class="revgrid">
         <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
           <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
