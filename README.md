@@ -9,7 +9,7 @@ Musik-Ratespiel für einen gemeinsamen Bildschirm (Laptop oder Tablet). Ein Song
 2. **Spotify-App** im [Developer Dashboard](https://developer.spotify.com/dashboard):
    - Redirect URI: `https://bobsli98.github.io/Song-Blitz/`
    - APIs: Web API und Web Playback SDK
-3. Seite öffnen, Client-ID eintragen, mit Spotify verbinden (Premium nötig) und den Link zu eurer Playlist einfügen.
+3. Seite öffnen, mit Spotify verbinden (Premium nötig) und eure Playlist aus der Liste wählen (oder per Link einfügen).
    Die Playlist muss dir gehören oder du musst dort mitarbeiten.
 
 Die Client-ID kann auch fest in `index.html` bei `CONFIG.clientId` eingetragen werden.

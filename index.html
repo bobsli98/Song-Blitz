@@ -208,6 +208,15 @@ h2{font-size:clamp(19px,3.2vw,25px)}
 .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 @media (min-width:860px){.app{max-width:960px}.setup{grid-template-columns:1fr 1fr}
 }
+.linkrow{display:flex;gap:16px;flex-wrap:wrap}
+.pllist{display:flex;flex-direction:column;gap:6px;max-height:184px;overflow:auto;padding:2px 4px 2px 2px}
+.plitem{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 12px 6px 6px;border:1px solid var(--line);border-radius:12px;text-align:left;background:var(--bg)}
+.plitem:hover:not(:disabled){border-color:var(--accent)}
+.plitem.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb, var(--accent) 8%, var(--bg))}
+.plitem img,.plph{width:40px;height:40px;border-radius:8px;object-fit:cover;display:grid;place-items:center}
+.plph{background:var(--line);color:var(--muted)}
+.pln{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plc{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -395,7 +404,7 @@ function hideMeta(){
 
 // ---------- Spotify ----------
 const SP = {
-  songs:[], deviceId:null, player:null, sdkLoading:false, playerMsg:"", loadMsg:"", authMsg:"", loading:false,
+  songs:[], playlists:null, plLoading:false, plMsg:"", deviceId:null, player:null, sdkLoading:false, playerMsg:"", loadMsg:"", authMsg:"", loading:false,
   albumCache:new Map(), onStart:null,
   redirect: location.origin + location.pathname,
   clientId(){ return CONFIG.clientId || SETTINGS.clientId || "" },
@@ -444,7 +453,7 @@ const SP = {
   },
   logout(){
     LS.del("sb_tok"); try{ this.player && this.player.disconnect() }catch(e){}
-    this.player=null; this.deviceId=null; this.sdkLoading=false; this.songs=[]; this.loadMsg=""; this.playerMsg="";
+    this.player=null; this.playlists=null; this.deviceId=null; this.sdkLoading=false; this.songs=[]; this.loadMsg=""; this.playerMsg="";
   },
   loadSDK(){
     if(this.player || this.sdkLoading) return;
@@ -491,6 +500,18 @@ const SP = {
       this.loadMsg=(e.status===403||e.status===404) ? "Kein Zugriff auf diese Playlist. Sie muss dir gehören oder du musst dort mitarbeiten." : "Die Playlist konnte nicht geladen werden: "+e.message;
     }
     this.loading=false; refresh();
+  },
+  async loadMyPlaylists(){
+    if(this.plLoading) return; this.plLoading=true; this.plMsg="";
+    try{
+      const me=await this.api("/me"); let url="/me/playlists?limit=50", out=[];
+      while(url && out.length<500){ const j=await this.api(url); out.push(...((j&&j.items)||[]).filter(Boolean)); url=j&&j.next; }
+      this.playlists=out.filter(p=>(p.owner&&p.owner.id===me.id)||p.collaborative).map(p=>{
+        const imgs=p.images||[], meta=p.items||p.tracks||{};
+        return {id:p.id, name:p.name||"Ohne Namen", cover:(imgs[imgs.length-1]||{}).url, count:typeof meta.total==="number"?meta.total:null};
+      });
+    }catch(e){ this.playlists=null; this.plMsg="Deine Playlists konnten nicht geladen werden. Du kannst stattdessen einen Link einfügen."; }
+    this.plLoading=false; refresh();
   },
   albumTracks(id){
     if(!id) return Promise.resolve([]);
@@ -602,6 +623,22 @@ function header(){
   ${inGame && S.phase!=="end" ? `<div class="scores">${S.names.map((n,i)=>`<div class="chip ${i===current()?"active":""}"><span>${esc(n)}</span><span class="pts">${S.scores[i]}</span></div>`).join("")}</div>` : ""}`;
 }
 
+function playlistPicker(){
+  const activeId=parsePlaylist(S.playlist);
+  const linkBox=`<label class="field" for="pl"><span class="eyebrow">Playlist-Link</span>
+      <input id="pl" value="${esc(S.playlist)}" placeholder="https://open.spotify.com/playlist/…" autocomplete="off" spellcheck="false"></label>
+    <button class="big" id="loadPl" ${SP.loading?"disabled":""}>Playlist laden</button>`;
+  if(SP.playlists===null) return `<p class="muted" style="margin:0">${esc(SP.plMsg||"Deine Playlists werden geladen …")}</p>${SP.plMsg?linkBox:""}`;
+  const q=(S.plFilter||"").toLowerCase();
+  const list=SP.playlists.filter(p=>!q||p.name.toLowerCase().includes(q));
+  return `<label class="field" for="plq"><span class="eyebrow">Eure Playlist</span>
+      <input id="plq" value="${esc(S.plFilter||"")}" placeholder="Playlist suchen …" autocomplete="off" spellcheck="false"></label>
+    <div class="pllist">${list.length?list.map(p=>`<button class="plitem ${p.id===activeId?"active":""}" data-pl="${esc(p.id)}" ${SP.loading?"disabled":""}>
+        ${p.cover?`<img src="${esc(p.cover)}" alt="" loading="lazy">`:`<span class="plph" aria-hidden="true">♪</span>`}
+        <span class="pln">${esc(p.name)}</span><span class="plc">${p.count!=null?`${p.count} Songs`:""}</span></button>`).join("")
+      :`<p class="muted" style="margin:0;padding:8px">${SP.playlists.length?"Keine Playlist mit diesem Namen.":"Du hast noch keine eigenen Playlists."}</p>`}</div>
+    ${S.showLink?linkBox:`<button class="link" id="byLink">Playlist per Link einfügen</button>`}`;
+}
 function musicPanel(){
   if(S.source==="demo") return `<div class="panel">
     <div class="eyebrow">Musik</div>
@@ -616,16 +653,13 @@ function musicPanel(){
   } else {
     const dev = SP.deviceId ? `<span class="pill ok">Abspielgerät bereit</span>` : `<span class="pill ${SP.playerMsg&&!SP.sdkLoading?"no":""}">${esc(SP.playerMsg||"Abspielgerät verbindet …")}</span>`;
     body=`<div class="statusrow"><span class="pill ok">Mit Spotify verbunden</span>${dev}</div>
-      <label class="field" for="pl"><span class="eyebrow">Playlist-Link</span>
-        <input id="pl" value="${esc(S.playlist)}" placeholder="https://open.spotify.com/playlist/…" autocomplete="off" spellcheck="false"></label>
-      <button class="big" id="loadPl" ${SP.loading?"disabled":""}>${SP.songs.length?"Playlist neu laden":"Playlist laden"}</button>
+      ${playlistPicker()}
       ${SP.loadMsg?`<p style="margin:0" class="${SP.songs.length?"":"muted"}">${esc(SP.loadMsg)}</p>`:""}
-      <p class="muted" style="margin:0;font-size:14px">Tipp: Schliesst die Spotify-App auf anderen Geräten, sonst steht dort der Songtitel.</p>
-      <button class="ghost" id="logout">Von Spotify abmelden</button>`;
+      <p class="muted" style="margin:0;font-size:14px">Tipp: Spotify-App auf anderen Geräten schliessen, sonst steht dort der Titel.</p>`;
   }
   return `<div class="panel"><div class="eyebrow">Musik</div>${body}
     ${SP.authMsg?`<p class="err">${esc(SP.authMsg)}</p>`:""}
-    <button class="link" id="useDemo">Lieber die Demo ohne Spotify</button></div>`;
+    <div class="linkrow">${SP.loggedIn()?`<button class="link" id="logout">Von Spotify abmelden</button>`:""}<button class="link" id="useDemo">Demo ohne Spotify</button></div></div>`;
 }
 
 function render(){
@@ -719,8 +753,11 @@ function bind(){
   $("pl")&&$("pl").addEventListener("keydown",e=>{ if(e.key==="Enter") SP.loadPlaylist(S.playlist); });
   on("login",()=>{ SP.authMsg=""; saveSettings(); SP.login(); });
   on("loadPl",()=>SP.loadPlaylist(S.playlist));
+  on("byLink",()=>{ S.showLink=true; render(); document.getElementById("pl")?.focus(); });
+  $("plq")&&$("plq").addEventListener("input",e=>{ S.plFilter=e.target.value; render(); });
+  app.querySelectorAll("[data-pl]").forEach(b=>b.onclick=()=>{ S.playlist=b.dataset.pl; saveSettings(); SP.loadPlaylist(S.playlist); });
   on("logout",()=>{ SP.logout(); render(); });
-  on("useSp",()=>{ S.source="spotify"; saveSettings(); if(SP.loggedIn()){ SP.loadSDK(); if(S.playlist && !SP.songs.length) SP.loadPlaylist(S.playlist); } render(); });
+  on("useSp",()=>{ S.source="spotify"; saveSettings(); if(SP.loggedIn()){ SP.loadSDK(); SP.loadMyPlaylists(); if(S.playlist && !SP.songs.length) SP.loadPlaylist(S.playlist); } render(); });
   on("useDemo",()=>{ S.source="demo"; saveSettings(); render(); });
   on("go",startGame);
   on("play",play);
@@ -734,7 +771,7 @@ document.addEventListener("keydown",e=>{ if(e.code==="Space" && S.phase==="playi
 
 (async()=>{
   try{ await SP.handleRedirect() }catch(e){ SP.authMsg=e.message }
-  if(SP.loggedIn() && S.source==="spotify"){ SP.loadSDK(); if(S.playlist) SP.loadPlaylist(S.playlist); }
+  if(SP.loggedIn() && S.source==="spotify"){ SP.loadSDK(); SP.loadMyPlaylists(); if(S.playlist) SP.loadPlaylist(S.playlist); }
   render();
 })();
 
