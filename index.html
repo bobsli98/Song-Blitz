@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f45d8">
+<title>Song-Blitz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: eine Bühne, ein Bildschirm pro Spielphase; Punkteleiste oben, grosser Daumen-Button unten */
+:root{
+  --bg:#eef0f7; --surface:#ffffff; --ink:#191b2e; --muted:#5d6180;
+  --line:#d6d9e8; --accent:#2f45d8; --accent-ink:#ffffff; --hot:#ffc531; --hot-ink:#2a2100;
+  --good:#1b8a55; --bad:#c23a3a;
+  --f-display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12142a; --surface:#1c1f3b; --ink:#eef0fb; --muted:#a3a8cc; --line:#2f3359;
+  --accent:#7d8dff; --accent-ink:#0e1030; --hot:#ffcf4d; --hot-ink:#2a2100; --good:#4fd194; --bad:#ff7a7a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12142a; --surface:#1c1f3b; --ink:#eef0fb; --muted:#a3a8cc; --line:#2f3359;
+  --accent:#7d8dff; --accent-ink:#0e1030; --hot:#ffcf4d; --hot-ink:#2a2100; --good:#4fd194; --bad:#ff7a7a; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
+.app{max-width:760px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:20px;min-height:100%;box-sizing:border-box}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,6vw,44px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,4.5vw,30px);font-weight:700}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+
+.brand{display:flex;align-items:center;gap:12px}
+.disc{width:44px;height:44px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 50% 50%, var(--hot) 0 18%, var(--ink) 19% 22%, var(--accent) 23% 100%)}
+.playing .disc{animation:spin 1.6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.players{display:flex;flex-direction:column;gap:10px}
+.prow{display:flex;gap:8px;align-items:center}
+.prow input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);font-size:22px;line-height:1;color:var(--muted);flex:none}
+.icon-btn:hover{color:var(--bad);border-color:var(--bad)}
+.ghost{padding:10px 14px;border-radius:12px;border:1px dashed var(--line);color:var(--accent);font-weight:600;align-self:flex-start}
+.stepper{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stepper .val{font-family:var(--f-mono);font-size:22px;font-weight:700;min-width:2ch;text-align:center}
+.big{width:100%;padding:20px;border-radius:16px;font-family:var(--f-display);font-weight:700;font-size:clamp(18px,4vw,22px);
+  background:var(--accent);color:var(--accent-ink);transition:transform .08s}
+.big:active{transform:scale(.98)}
+.big.hot{background:var(--hot);color:var(--hot-ink);font-size:clamp(24px,6vw,34px);padding:28px}
+.big:disabled{opacity:.5;cursor:default}
+
+.scores{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;gap:8px;align-items:baseline;padding:8px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600}
+.chip .pts{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.chip.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.chip.active .pts{color:var(--accent)}
+
+.stage{display:flex;flex-direction:column;gap:18px;align-items:stretch;text-align:center}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:clamp(56px,16vw,96px);line-height:1}
+.worth{font-family:var(--f-mono);font-size:18px;color:var(--muted)}
+.worth b{color:var(--ink)}
+.bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:left;transition:transform .1s linear}
+
+.options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:460px){.options{grid-template-columns:1fr}}
+.opt{padding:18px 16px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-weight:700;font-size:18px;text-align:left;min-width:0}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--good);background:color-mix(in srgb, var(--good) 14%, var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb, var(--bad) 12%, var(--surface))}
+.opt:disabled{cursor:default}
+.verdict{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,6vw,36px)}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+.songcard{display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:14px;background:var(--bg)}
+.songcard b{font-size:18px}
+
+.rank{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.rank li{display:grid;grid-template-columns:2.2em 1fr auto;gap:12px;align-items:center;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.rank li:first-child{border-color:var(--hot);box-shadow:inset 0 0 0 1px var(--hot)}
+.rank .pos{font-family:var(--f-display);font-weight:800;font-size:20px;color:var(--muted)}
+.rank .name{font-weight:700;font-size:18px;min-width:0;overflow-wrap:anywhere}
+.rank .pts{font-family:var(--f-mono);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+.note{font-size:14px;color:var(--muted);padding:12px 14px;border-radius:12px;border:1px dashed var(--line)}
+/* Tanzfläche */
+.floor{position:relative;height:150px;overflow:hidden;border-radius:16px;
+  background:linear-gradient(to top, color-mix(in srgb, var(--accent) 22%, var(--bg)) 0 22px, var(--bg) 22px);
+  display:flex;justify-content:space-evenly;align-items:flex-end;padding-bottom:14px}
+.dancer{width:clamp(54px,13vw,78px);flex:none;transform-origin:50% 100%}
+.dancer svg{display:block;width:100%;height:auto;overflow:visible}
+.dancer *{transform-box:fill-box}
+.duck{animation:bop var(--beat) ease-in-out infinite alternate}
+.duck.off{animation-delay:calc(var(--beat) * -1)}
+.duck .wing{transform-origin:20% 30%;animation:flap calc(var(--beat) / 2) ease-in-out infinite alternate}
+.duck .headg{transform-origin:30% 90%;animation:nod var(--beat) ease-in-out infinite alternate}
+@keyframes bop{from{transform:translateY(0) rotate(-9deg)}to{transform:translateY(-16px) rotate(9deg)}}
+@keyframes flap{from{transform:rotate(0)}to{transform:rotate(-38deg)}}
+@keyframes nod{from{transform:rotate(-6deg)}to{transform:rotate(10deg)}}
+.turtle{width:clamp(64px,15vw,92px)}
+.turtle .head{animation:hide calc(var(--beat) * 2) ease-in-out infinite}
+.turtle.off .head{animation-delay:calc(var(--beat) * -1)}
+.turtle .shell{transform-origin:50% 100%;animation:squish calc(var(--beat) * 2) ease-in-out infinite}
+.turtle.off .shell{animation-delay:calc(var(--beat) * -1)}
+@keyframes hide{0%,35%{transform:translateX(0)}50%,85%{transform:translateX(18px) scale(.55)}100%{transform:translateX(0)}}
+@keyframes squish{0%,35%{transform:scale(1,1)}45%{transform:scale(1.08,.88)}55%,100%{transform:scale(1,1)}}
+.walker{position:absolute;bottom:12px;left:0;width:46px;animation:walk 9s linear infinite, waddle calc(var(--beat) / 2) ease-in-out infinite alternate}
+@keyframes walk{from{translate:-60px 0}to{translate:calc(min(760px,100vw) + 20px) 0}}
+@keyframes waddle{from{rotate:-10deg}to{rotate:10deg}}
+.notefly{position:absolute;bottom:20px;font-size:22px;color:var(--accent);opacity:0;animation:rise calc(var(--beat) * 4) ease-out infinite}
+@keyframes rise{0%{transform:translateY(0) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(-120px) rotate(25deg);opacity:0}}
+.mood{font-size:44px;line-height:1;animation:pop .5s ease-out}
+@keyframes pop{from{transform:scale(.3)}70%{transform:scale(1.2)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.playing .disc{animation:none}.bar i{transition:none}
+  .dancer,.dancer *,.walker,.notefly,.mood{animation:none!important}.notefly{opacity:.6}}
+
+.floor{height:190px}
+.anteater{width:clamp(80px,19vw,116px);animation:sway var(--beat) ease-in-out infinite alternate}
+.anteater .tongue{transform-origin:100% 50%;animation:lick var(--beat) ease-in-out infinite}
+.anteater.off .tongue{animation-delay:calc(var(--beat) * -.5)}
+.anteater .tail{transform-origin:0% 100%;animation:wag calc(var(--beat) / 2) ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-3deg) translateY(0)}to{transform:rotate(3deg) translateY(-6px)}}
+@keyframes lick{0%,55%{transform:scaleX(0)}70%{transform:scaleX(1)}85%,100%{transform:scaleX(0)}}
+@keyframes wag{from{transform:rotate(-12deg)}to{transform:rotate(14deg)}}
+.branch{position:absolute;top:10px;left:4%;width:40%;height:8px;border-radius:4px;background:#7a5230}
+.sloth{position:absolute;top:6px;left:14%;width:clamp(48px,11vw,64px);transform-origin:50% 4px;animation:swing calc(var(--beat) * 4) ease-in-out infinite alternate}
+.sloth .eyes{transform-origin:50% 50%;animation:blink calc(var(--beat) * 8) linear infinite}
+@keyframes swing{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}93%,97%{transform:scaleY(.1)}}
+.discoball{position:absolute;top:0;left:68%;display:flex;flex-direction:column;align-items:center}
+.discoball .cord{width:2px;height:16px;background:var(--muted)}
+.discoball .ball{width:40px;height:40px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff 0 8%,transparent 30%),repeating-conic-gradient(#d9dde8 0 15deg,#9aa1b8 15deg 30deg),#c8ccd8;
+  box-shadow:0 0 18px rgba(255,255,255,.55);animation:spinball calc(var(--beat) * 4) linear infinite}
+@keyframes spinball{to{transform:rotate(360deg)}}
+.spot{position:absolute;width:14px;height:14px;border-radius:50%;filter:blur(2px);opacity:0;animation:spot calc(var(--beat) * 2) ease-in-out infinite}
+@keyframes spot{0%,100%{opacity:0;transform:translate(0,0)}50%{opacity:.85;transform:translate(26px,8px)}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+@media (prefers-reduced-motion:reduce){.sloth,.sloth *,.discoball .ball,.spot,.anteater,.anteater *{animation:none!important}.anteater .tongue{transform:scaleX(0)}}
+
+.rocker{width:clamp(64px,14vw,86px);animation:jump calc(var(--beat) / 2) ease-in-out infinite alternate}
+.rocker .head{transform-origin:50% 95%;animation:bang calc(var(--beat) / 2) ease-in-out infinite alternate}
+.rocker .strum{transform-origin:85% 0%;animation:strum calc(var(--beat) / 4) ease-in-out infinite alternate}
+.rocker .axe{transform-origin:75% 70%;animation:tilt var(--beat) ease-in-out infinite alternate}
+.rocker .zap{animation:zap calc(var(--beat) / 2) steps(1) infinite}
+.rocker .zap.b{animation-delay:calc(var(--beat) / -4)}
+@keyframes jump{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+@keyframes bang{from{transform:rotate(-18deg)}to{transform:rotate(24deg)}}
+@keyframes strum{from{transform:rotate(-12deg)}to{transform:rotate(10deg)}}
+@keyframes tilt{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+@keyframes zap{0%{opacity:1}50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.rocker,.rocker *{animation:none!important}}
+
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field input{font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-width:0;width:100%}
+.statusrow{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:var(--good);border-color:color-mix(in srgb, var(--good) 45%, var(--line))}
+.pill.ok::before{content:"●";font-size:10px}
+.pill.no{color:var(--bad);border-color:color-mix(in srgb, var(--bad) 45%, var(--line))}
+.err{margin:0;color:var(--bad);font-weight:600}
+.link{color:var(--muted);text-decoration:underline;text-underline-offset:3px;align-self:flex-start;padding:4px 0;font-size:14px}
+.songcard{flex-direction:row;align-items:center;gap:14px;text-align:left}
+.songcard>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cover{width:72px;height:72px;border-radius:10px;object-fit:cover;flex:none}
+
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+// ---------- Songliste (Platzhalter, wird später durch eure Liste ersetzt) ----------
+// Jedes Album liefert die falschen Antworten für seine eigenen Songs.
+const ALBUMS = [
+  { artist:"Die Platzhalter", album:"Probeklang", tracks:["Erster Versuch","Mikro an","Soundcheck Blues","Zweite Strophe","Letzte Zugabe"] },
+  { artist:"Nebel & Neon", album:"Nachtzug", tracks:["Gleis 7","Funkenflug","Halb vier","Kein Fahrplan","Endstation Meer"] },
+  { artist:"Lina Beispiel", album:"Sommer im Kopf", tracks:["Limonade","Barfuss","Wolkenkratzer","Freibad","Spätsommer"] },
+];
+const SONGS = ALBUMS.flatMap((a,ai)=>a.tracks.map((t,ti)=>({title:t, artist:a.artist, album:a.album, albumIdx:ai, seed:(ai+1)*101+(ti+1)*17})));
+
+const MAX_T = 30;           // Sekunden pro Song
+const ptsFor = t => Math.max(100, Math.round(1000 - 900*Math.min(t,MAX_T)/MAX_T));
+
+// ---------- Platzhalter-Musik (Web Audio) ----------
+let ctx=null, master=null;
+function rng(seed){let s=seed>>>0;return()=>{s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const hz = m => 440*Math.pow(2,(m-69)/12);
+function note(type, m, start, dur, vol){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type; o.frequency.value=hz(m);
+  g.gain.setValueAtTime(0,start); g.gain.linearRampToValueAtTime(vol,start+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+  o.connect(g).connect(master); o.start(start); o.stop(start+dur+0.05);
+}
+function playSong(song){
+  stopSong();
+  ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==="suspended") ctx.resume();
+  master = ctx.createGain(); master.gain.value=0.18; master.connect(ctx.destination);
+  const r=rng(song.seed);
+  const scales=[[0,2,4,7,9,12,14,16],[0,3,5,7,10,12,15,17],[0,2,3,7,8,12,14,15]];
+  const scale=scales[Math.floor(r()*3)];
+  const root=55+Math.floor(r()*8), bpm=88+Math.floor(r()*70), step=60/bpm/2;
+  const lead=["triangle","square","sawtooth"][Math.floor(r()*3)];
+  const mel=[...Array(16)].map(()=> r()<0.22 ? null : scale[Math.floor(r()*scale.length)]);
+  const bass=[0,scale[3+Math.floor(r()*2)]-12,scale[2]-12,scale[4]-12].map((v,i)=>i===0?-12:v);
+  const t0=ctx.currentTime+0.05, steps=Math.ceil(MAX_T/step);
+  for(let i=0;i<steps;i++){
+    const t=t0+i*step, m=mel[i%16];
+    if(m!==null) note(lead, root+m, t, step*1.6, 0.35);
+    if(i%4===0) note("sine", root-12+bass[Math.floor(i/4)%4], t, step*3.6, 0.6);
+    if(i%2===0) note("square", root+36, t, 0.03, 0.04);
+  }
+  return bpm;
+}
+
+// ---------- Tänzer ----------
+const DUCK=`<svg viewBox="0 0 80 72" aria-hidden="true">
+  <ellipse cx="40" cy="70" rx="24" ry="3" fill="#000" opacity=".15"/>
+  <path d="M30 64 l-4 6 h8z M46 64 l-4 6 h8z" fill="#f08a1c"/>
+  <ellipse cx="40" cy="50" rx="26" ry="17" fill="#ffd23f"/>
+  <path d="M14 46 q-8 -6 -4 -14 q6 6 10 8z" fill="#ffd23f"/>
+  <path class="wing" d="M34 44 q14 -4 20 6 q-10 8 -22 2z" fill="#f2bd1d"/>
+  <g class="headg"><circle cx="58" cy="28" r="14" fill="#ffd23f"/>
+  <path d="M69 28 q12 1 12 5 q-6 4 -13 1z" fill="#f08a1c"/>
+  <circle cx="61" cy="24" r="3.2" fill="#1a1a1a"/><circle cx="62" cy="23" r="1.1" fill="#fff"/>
+  <path d="M52 14 q4 -8 9 -3" stroke="#f2bd1d" stroke-width="3" fill="none" stroke-linecap="round"/></g>
+</svg>`;
+const TURTLE=`<svg viewBox="0 0 100 64" aria-hidden="true">
+  <ellipse cx="50" cy="62" rx="34" ry="3" fill="#000" opacity=".15"/>
+  <g class="head"><path d="M20 42 q-6 -2 -10 -10" stroke="#6fbf5a" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <circle cx="9" cy="30" r="9" fill="#6fbf5a"/><circle cx="6" cy="27" r="2.6" fill="#1a1a1a"/>
+  <path d="M2 34 q4 3 8 1" stroke="#1a1a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>
+  <rect x="26" y="48" width="10" height="12" rx="5" fill="#6fbf5a"/><rect x="64" y="48" width="10" height="12" rx="5" fill="#6fbf5a"/>
+  <path d="M84 50 l10 3 l-10 2z" fill="#6fbf5a"/>
+  <g class="shell"><path d="M16 52 q2 -40 34 -40 q32 0 34 40z" fill="#3e8a3a"/>
+  <path d="M38 22 l12 -6 l12 6 l0 14 l-12 6 l-12 -6z M24 46 l10 -12 M76 46 l-10 -12 M50 42 v10" stroke="#a9d86e" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <rect x="14" y="49" width="72" height="5" rx="2.5" fill="#2f6e2c"/></g>
+</svg>`;
+
+const ANTEATER=`<svg viewBox="0 0 120 70" aria-hidden="true">
+  <ellipse cx="62" cy="68" rx="40" ry="3" fill="#000" opacity=".15"/>
+  <line class="tongue" x1="0" y1="44" x2="14" y2="44" stroke="#ff6f91" stroke-width="3" stroke-linecap="round"/>
+  <g class="tail"><path d="M92 40 q22 -24 26 -6 q2 14 -18 18z" fill="#6b5640"/></g>
+  <rect x="40" y="50" width="9" height="16" rx="4" fill="#5a4634"/><rect x="76" y="50" width="9" height="16" rx="4" fill="#5a4634"/>
+  <ellipse cx="64" cy="40" rx="32" ry="16" fill="#9c8467"/>
+  <path d="M46 28 q10 6 6 22 l-8 2 q4 -14 -6 -20z" fill="#2b2420"/><path d="M50 27 q10 8 6 22" stroke="#f3eee6" stroke-width="3" fill="none"/>
+  <path d="M36 34 q-14 4 -22 9 q-2 2 0 3 q12 0 24 -3z" fill="#9c8467"/>
+  <circle cx="34" cy="35" r="1.8" fill="#1a1a1a"/><ellipse cx="40" cy="29" rx="3" ry="4" fill="#8a7358"/>
+</svg>`;
+const SLOTH=`<svg viewBox="0 0 70 96" aria-hidden="true">
+  <path d="M20 4 q-4 20 6 34 M50 4 q4 20 -6 34" stroke="#8b7360" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M15 2 l-3 -2 M20 2 l0 -3 M50 2 l0 -3 M55 2 l3 -2" stroke="#3a2f27" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="35" cy="58" rx="20" ry="26" fill="#8b7360"/>
+  <ellipse cx="35" cy="44" rx="15" ry="13" fill="#e9d9bf"/>
+  <g class="eyes"><path d="M23 44 q4 -6 9 -1 q-4 6 -9 1z M38 43 q5 -5 9 1 q-5 5 -9 -1z" fill="#3a2f27"/>
+  <circle cx="28" cy="43" r="1.6" fill="#fff"/><circle cx="42" cy="43" r="1.6" fill="#fff"/></g>
+  <ellipse cx="35" cy="49" rx="3" ry="2" fill="#3a2f27"/><path d="M30 53 q5 4 10 0" stroke="#3a2f27" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M22 80 q-4 10 2 14 M48 80 q4 10 -2 14" stroke="#8b7360" stroke-width="9" fill="none" stroke-linecap="round"/>
+</svg>`;
+
+const ROCKER=`<svg viewBox="0 0 90 110" aria-hidden="true">
+  <ellipse cx="45" cy="108" rx="26" ry="3" fill="#000" opacity=".15"/>
+  <path d="M34 72 l-6 34 h10 l6 -28 l6 28 h10 l-6 -34z" fill="#2b3a67"/>
+  <path d="M26 104 h14 v5 h-16z M50 104 h14 l2 5 h-16z" fill="#1a1a1a"/>
+  <path d="M29 41 q16 -7 32 0 l1 33 h-34z" fill="#e8b48c"/>
+  <path d="M40 44 l1 3 M45 46 l0 3 M49 44 l-1 3 M43 50 l1 2 M47 50 l-1 2" stroke="#6b4a35" stroke-width="1.1" stroke-linecap="round"/>
+  <path d="M34 38 h4 q2 10 7 18 q5 -8 7 -18 h4 l1 8 q-1 6 4 10 l1 18 h-34 l1 -18 q5 -4 4 -10z" fill="#f7f7f2" stroke="#d8d8cf" stroke-width="1.2" stroke-linejoin="round"/>
+  <ellipse cx="38" cy="66" rx="3.2" ry="2.4" fill="#d9b94a" opacity=".55"/><circle cx="57" cy="60" r="1.4" fill="#d9b94a" opacity=".5"/>
+  <path d="M33 44 l26 22" stroke="#3a3a3a" stroke-width="2.5"/>
+  <g class="axe">
+    <line x1="47" y1="62" x2="9" y2="44" stroke="#5a3a22" stroke-width="5" stroke-linecap="round"/>
+    <path d="M10 44 l-7 -4 l-1 5 l6 3z" fill="#1a1a1a"/>
+    <path d="M42 60 q-2 -8 8 -7 q6 -6 12 1 q8 3 2 12 q4 9 -8 10 q-14 2 -14 -8 q-4 -4 0 -8z" fill="#d7263d"/>
+    <path d="M46 60 q6 -4 12 2 q-2 6 -8 6z" fill="#f2f2f2" opacity=".85"/>
+    <rect x="49" y="68" width="9" height="3" rx="1" fill="#1a1a1a"/>
+  </g>
+  <path d="M30 43 q-12 2 -13 7" stroke="#e8b48c" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <g class="strum"><path d="M61 44 q7 10 -6 19" stroke="#e8b48c" stroke-width="7" fill="none" stroke-linecap="round"/></g>
+  <g class="head"><rect x="41" y="30" width="8" height="8" fill="#e8b48c"/>
+  <ellipse cx="45" cy="22" rx="12" ry="13" fill="#e8b48c"/>
+  <ellipse cx="40" cy="13" rx="3.5" ry="2" fill="#fff" opacity=".7" transform="rotate(-25 40 13)"/>
+  <path d="M38 26 q7 6 14 0 q-7 4 -14 0z" fill="#7a1f2a"/><circle cx="40" cy="20" r="1.6" fill="#1a1a1a"/><circle cx="50" cy="20" r="1.6" fill="#1a1a1a"/></g>
+  <path class="zap" d="M70 58 l6 -4 l-3 6 l7 -3" stroke="#ffc531" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <path class="zap b" d="M6 34 l-4 -5 l6 2 l-2 -6" stroke="#ffc531" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+</svg>`;
+const SPOTCOL=["#ff5ca8","#5cc8ff","#ffe066","#8dff8a","#c38bff"];
+// ---------- Konfetti ----------
+let confRaf=null;
+function confetti(n=140){
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let cv=document.getElementById("confetti");
+  if(!cv){cv=document.createElement("canvas");cv.id="confetti";document.body.appendChild(cv)}
+  const dpr=window.devicePixelRatio||1, W=cv.width=innerWidth*dpr, H=cv.height=innerHeight*dpr, c=cv.getContext("2d");
+  const cols=["#ff5ca8","#2f45d8","#ffc531","#1b8a55","#5cc8ff","#c38bff"];
+  const ps=[...Array(n)].map(()=>({x:W*(.2+Math.random()*.6),y:H*.35,vx:(Math.random()-.5)*16*dpr,vy:(-6-Math.random()*12)*dpr,
+    w:(6+Math.random()*6)*dpr,h:(3+Math.random()*4)*dpr,r:Math.random()*6,vr:(Math.random()-.5)*.4,col:cols[Math.floor(Math.random()*cols.length)]}));
+  cancelAnimationFrame(confRaf); const t0=performance.now();
+  (function f(now){
+    c.clearRect(0,0,W,H);
+    ps.forEach(p=>{p.vy+=.35*dpr;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      c.save();c.translate(p.x,p.y);c.rotate(p.r);c.fillStyle=p.col;c.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.r*2)));c.restore()});
+    if(now-t0<3500) confRaf=requestAnimationFrame(f); else c.clearRect(0,0,W,H);
+  })(t0);
+}
+function floorHTML(){
+  const art={duck:DUCK,turtle:TURTLE,anteater:ANTEATER,rocker:ROCKER};
+  const cast=shuffle(["duck","turtle","anteater","duck","turtle"]).slice(0, window.innerWidth<480?2:4);
+  cast.splice(Math.floor(cast.length/2),0,"rocker");
+  return `<div class="floor" style="--beat:${(60/S.bpm).toFixed(3)}s" aria-hidden="true">
+    <div class="branch"></div><div class="sloth">${SLOTH}</div>
+    <div class="discoball"><div class="cord"></div><div class="ball"></div></div>
+    ${[[20,60],[45,30],[70,70],[85,40],[30,90]].map(([x,y],i)=>`<span class="spot" style="left:${x}%;top:${y}px;background:${SPOTCOL[i]};animation-delay:calc(var(--beat) * ${-i*.4})"></span>`).join("")}
+    ${cast.map((c,i)=>`<div class="dancer ${c}${i%2?" off":""}">${art[c]}</div>`).join("")}
+    <div class="dancer walker">${DUCK}</div>
+    ${[12,38,63,86].map((x,i)=>`<span class="notefly" style="left:${x}%;animation-delay:calc(var(--beat) * ${-i})">${i%2?"♫":"♪"}</span>`).join("")}
+  </div>`;
+}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const CHEERS=["Quak-tastisch!","Die Enten verneigen sich.","Der Ameisenbär streckt anerkennend die Zunge raus.","Sogar das Faultier ist kurz aufgewacht.","Der Rocker spielt dir ein Ehren-Solo.","Schildkröten-Applaus (langsam, aber ehrlich).","Ohrwurm-Profi!"];
+const FAILS=["Die Schildkröte zieht vor Scham den Kopf ein.","Dem Rocker ist vor Schreck eine Saite gerissen.","Die Enten schauen betreten weg.","Quak. Nein.","Knapp daneben ist auch vorbei."];
+const SLOW=["Die Schildkröte war schneller.","Die Enten sind eingeschlafen.","Selbst das Faultier hätte das erkannt."];
+function stopSong(){ if(master){ try{master.disconnect()}catch(e){} master=null; } }
+
+// ---------- Einstellungen & Hilfsfunktionen ----------
+const CONFIG = { clientId: "" };   // Spotify Client-ID kann hier fest eingetragen werden
+const SCOPES = "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative";
+const LS = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v) }catch(e){ return d } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+let SETTINGS = LS.get("sb_settings", {});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const b64url=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const cleanTitle=n=>String(n)
+  .replace(/\s+-\s+.*\b(remaster(ed)?|version|live|edit|mono|stereo|mix|bonus|deluxe|demo)\b.*$/i,"")
+  .replace(/\s*[(\[][^)\]]*\b(remaster(ed)?|version|edit|mono|stereo|bonus)\b[^)\]]*[)\]]/ig,"").trim();
+const norm=s=>cleanTitle(s).toLowerCase().replace(/\s*[(\[].*$/,"").replace(/\s+-\s+.*$/,"").trim();
+function parsePlaylist(s){
+  s=String(s||"").trim();
+  const m=s.match(/playlist[/:]([A-Za-z0-9]{10,})/); if(m) return m[1];
+  return /^[A-Za-z0-9]{15,}$/.test(s) ? s : null;
+}
+function hideMeta(){
+  if(!("mediaSession" in navigator) || typeof MediaMetadata==="undefined") return;
+  const set=()=>{ try{ navigator.mediaSession.metadata=new MediaMetadata({title:"Song-Blitz", artist:"Wer erkennt's?"}) }catch(e){} };
+  set(); setTimeout(set,800); setTimeout(set,2500);
+}
+
+// ---------- Spotify ----------
+const SP = {
+  songs:[], deviceId:null, player:null, sdkLoading:false, playerMsg:"", loadMsg:"", authMsg:"", loading:false,
+  albumCache:new Map(), onStart:null,
+  redirect: location.origin + location.pathname,
+  clientId(){ return CONFIG.clientId || SETTINGS.clientId || "" },
+  tok(){ return LS.get("sb_tok", null) },
+  loggedIn(){ return !!this.tok() },
+  async login(){
+    const id=this.clientId();
+    if(!id){ this.authMsg="Bitte zuerst die Client-ID eintragen."; render(); return; }
+    const v=b64url(crypto.getRandomValues(new Uint8Array(48)));
+    const ch=b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v))));
+    LS.set("sb_verifier", v);
+    const q=new URLSearchParams({client_id:id, response_type:"code", redirect_uri:this.redirect, code_challenge_method:"S256", code_challenge:ch, scope:SCOPES});
+    location.href="https://accounts.spotify.com/authorize?"+q;
+  },
+  async handleRedirect(){
+    const p=new URLSearchParams(location.search);
+    if(p.get("error")){ this.authMsg="Die Spotify-Anmeldung wurde abgebrochen."; history.replaceState(null,"",this.redirect); return; }
+    const code=p.get("code"); if(!code) return;
+    history.replaceState(null,"",this.redirect);
+    await this.tokenReq(new URLSearchParams({grant_type:"authorization_code", code, redirect_uri:this.redirect, client_id:this.clientId(), code_verifier:LS.get("sb_verifier","")}));
+    LS.del("sb_verifier");
+  },
+  async tokenReq(body){
+    const r=await fetch("https://accounts.spotify.com/api/token",{method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){ LS.del("sb_tok"); throw new Error("Spotify-Anmeldung fehlgeschlagen ("+(j.error_description||j.error||r.status)+"). Stimmen Client-ID und Redirect URI?"); }
+    const old=this.tok()||{};
+    LS.set("sb_tok",{access:j.access_token, refresh:j.refresh_token||old.refresh, exp:Date.now()+((j.expires_in||3600)-60)*1000});
+  },
+  async token(){
+    let t=this.tok(); if(!t) throw new Error("Nicht mit Spotify verbunden.");
+    if(Date.now()>t.exp){
+      await this.tokenReq(new URLSearchParams({grant_type:"refresh_token", refresh_token:t.refresh, client_id:this.clientId()}));
+      t=this.tok();
+    }
+    return t.access;
+  },
+  async api(path, opts={}, retry=true){
+    const url=path.startsWith("http") ? path : "https://api.spotify.com/v1"+path;
+    const r=await fetch(url,{...opts, headers:{Authorization:"Bearer "+await this.token(), "Content-Type":"application/json"}});
+    if(r.status===401 && retry){ const t=this.tok(); if(t){ t.exp=0; LS.set("sb_tok",t) } return this.api(path,opts,false); }
+    if(r.status===204 || r.status===202) return null;
+    const txt=await r.text(); let j=null; try{ j=txt?JSON.parse(txt):null }catch(e){}
+    if(!r.ok){ const e=new Error((j&&j.error&&j.error.message)||("Fehler "+r.status)); e.status=r.status; throw e; }
+    return j;
+  },
+  logout(){
+    LS.del("sb_tok"); try{ this.player && this.player.disconnect() }catch(e){}
+    this.player=null; this.deviceId=null; this.sdkLoading=false; this.songs=[]; this.loadMsg=""; this.playerMsg="";
+  },
+  loadSDK(){
+    if(this.player || this.sdkLoading) return;
+    this.sdkLoading=true; this.playerMsg="Abspielgerät verbindet …";
+    window.onSpotifyWebPlaybackSDKReady=()=>{
+      const pl=new Spotify.Player({name:"Song-Blitz", getOAuthToken:cb=>this.token().then(cb).catch(()=>{}), volume:0.8});
+      pl.addListener("ready",({device_id})=>{ this.deviceId=device_id; this.playerMsg=""; refresh(); });
+      pl.addListener("not_ready",()=>{ this.deviceId=null; this.playerMsg="Abspielgerät ist offline. Lade die Seite neu."; refresh(); });
+      pl.addListener("initialization_error",({message})=>{ this.playerMsg="Dieser Browser kann Spotify nicht abspielen ("+message+")."; refresh(); });
+      pl.addListener("authentication_error",()=>{ this.playerMsg="Die Anmeldung ist abgelaufen. Bitte neu verbinden."; LS.del("sb_tok"); refresh(); });
+      pl.addListener("account_error",()=>{ this.playerMsg="Zum Abspielen braucht es Spotify Premium."; refresh(); });
+      pl.addListener("playback_error",({message})=>console.warn("Spotify:",message));
+      pl.addListener("player_state_changed",st=>{ if(st && !st.paused && this.onStart){ const f=this.onStart; this.onStart=null; f(); } });
+      pl.connect(); this.player=pl;
+    };
+    const s=document.createElement("script"); s.src="https://sdk.scdn.co/spotify-player.js";
+    s.onerror=()=>{ this.playerMsg="Der Spotify-Player konnte nicht geladen werden."; this.sdkLoading=false; refresh(); };
+    document.head.appendChild(s);
+  },
+  async loadPlaylist(input){
+    const id=parsePlaylist(input);
+    if(!id){ this.loadMsg="Das sieht nicht nach einem Playlist-Link aus. Kopiere ihn in Spotify über Teilen → Link kopieren."; refresh(); return; }
+    this.loading=true; this.loadMsg="Playlist wird geladen …"; refresh();
+    try{
+      let name=""; try{ name=(await this.api(`/playlists/${id}?fields=name`)).name||"" }catch(e){}
+      const fetchAll=async base=>{ let url=base, out=[];
+        while(url){ const j=await this.api(url);
+          for(const it of (j&&j.items)||[]){ const t=it.item||it.track; if(t && t.type==="track" && !t.is_local && t.uri) out.push(t); }
+          url=j&&j.next; }
+        return out; };
+      let tracks;
+      try{ tracks=await fetchAll(`/playlists/${id}/items?limit=50`) }
+      catch(e){ if(e.status===404||e.status===400) tracks=await fetchAll(`/playlists/${id}/tracks?limit=50`); else throw e; }
+      const seen=new Set();
+      this.songs=tracks.filter(t=>!seen.has(t.uri)&&seen.add(t.uri)).map(t=>({
+        id:t.id, uri:t.uri, title:cleanTitle(t.name),
+        artist:(t.artists||[]).map(a=>a.name).join(", "),
+        album:(t.album&&t.album.name)||"", albumId:t.album&&t.album.id,
+        cover:t.album&&t.album.images&&(t.album.images[1]||t.album.images[0]||{}).url
+      }));
+      this.loadMsg=this.songs.length ? `${this.songs.length} Songs bereit${name?` aus «${name}»`:""}.` : "Die Playlist ist leer.";
+    }catch(e){
+      this.songs=[];
+      this.loadMsg=(e.status===403||e.status===404) ? "Kein Zugriff auf diese Playlist. Sie muss dir gehören oder du musst dort mitarbeiten." : "Die Playlist konnte nicht geladen werden: "+e.message;
+    }
+    this.loading=false; refresh();
+  },
+  albumTracks(id){
+    if(!id) return Promise.resolve([]);
+    if(!this.albumCache.has(id))
+      this.albumCache.set(id, this.api(`/albums/${id}/tracks?limit=50`).then(j=>((j&&j.items)||[]).map(t=>({title:cleanTitle(t.name)}))).catch(()=>[]));
+    return this.albumCache.get(id);
+  },
+  async play(song){
+    if(!this.player || !this.deviceId) throw new Error("Das Spotify-Abspielgerät ist noch nicht bereit.");
+    try{ this.player.activateElement && this.player.activateElement() }catch(e){}
+    const started=new Promise(res=>{ this.onStart=res; setTimeout(()=>{ if(this.onStart===res){ this.onStart=null; res(); } },6000); });
+    const body=JSON.stringify({uris:[song.uri], position_ms:0});
+    const go=()=>this.api(`/me/player/play?device_id=${this.deviceId}`,{method:"PUT", body});
+    try{ await go() }
+    catch(e){
+      if(e.status===404 || e.status===502){ await new Promise(r=>setTimeout(r,1200)); await go(); }
+      else { this.onStart=null; throw new Error(e.status===403 ? "Spotify lässt das Abspielen nicht zu (Premium nötig?)." : "Der Song konnte nicht gestartet werden: "+e.message); }
+    }
+    await started; hideMeta();
+  },
+  pause(){ try{ this.player && this.player.pause() }catch(e){} }
+};
+
+// ---------- Spielzustand ----------
+const defaultSource = "spotify";
+let S = { phase:"setup", players:SETTINGS.players||["Spieler 1","Spieler 2"], perPlayer:SETTINGS.perPlayer||5,
+  source:SETTINGS.source||defaultSource, playlist:SETTINGS.playlist||"", clientId:SETTINGS.clientId||"" };
+function saveSettings(){
+  SETTINGS={...SETTINGS, players:S.players, perPlayer:S.perPlayer, source:S.source, playlist:S.playlist, clientId:S.clientId};
+  LS.set("sb_settings", SETTINGS);
+}
+const app=document.getElementById("app");
+let raf=null;
+const pool=()=> S.source==="spotify" ? SP.songs : SONGS;
+const spotifyReady=()=> SP.songs.length>0 && !!SP.deviceId;
+const refresh=()=>{ if(S.phase==="setup") render(); };
+
+function startGame(){
+  const names=S.players.map(n=>n.trim()).filter(Boolean);
+  if(!names.length) return;
+  if(S.source==="spotify" && !spotifyReady()) return;
+  saveSettings();
+  const total=names.length*S.perPlayer, src=pool();
+  let deck=[]; while(deck.length<total) deck=deck.concat(shuffle(src));
+  S={...S, phase:"ready", names, scores:names.map(()=>0), best:names.map(()=>null), round:0, total, deck:deck.slice(0,total), err:null};
+  render();
+}
+const current=()=>S.round % S.names.length;
+
+async function optionsFor(song){
+  let cands=[];
+  if(S.source==="spotify") cands=await SP.albumTracks(song.albumId);
+  else cands=SONGS.filter(s=>s.albumIdx===song.albumIdx);
+  const seen=new Set([norm(song.title)]), wrong=[];
+  const take=list=>{ for(const c of shuffle(list)){ if(wrong.length>=3) break; const k=norm(c.title); if(k && !seen.has(k)){ seen.add(k); wrong.push(c); } } };
+  take(cands);            // zuerst Songs vom gleichen Album
+  take(pool());           // zu kleines Album: mit Songs aus der Liste auffüllen
+  return shuffle([song,...wrong]);
+}
+
+async function play(){
+  const song=S.deck[S.round];
+  S.optsP=optionsFor(song);
+  S.err=null;
+  if(S.source==="spotify"){
+    S.phase="loading"; const p=SP.play(song); render();
+    try{ await p }catch(e){ S.phase="ready"; S.err=e.message; render(); return; }
+    S.bpm=100+Math.floor(Math.random()*40);
+  } else S.bpm=playSong(song);
+  S.phase="playing"; S.t=0; S.start=performance.now(); render(); tick();
+}
+function tick(){
+  S.t=(performance.now()-S.start)/1000;
+  if(S.t>=MAX_T){ S.t=MAX_T; recognized(true); return; }
+  const c=document.getElementById("clock"), w=document.getElementById("worth"), b=document.getElementById("barfill");
+  if(c){ c.textContent=S.t.toFixed(1); w.innerHTML=`gerade <b>${ptsFor(S.t)}</b> Punkte wert`; b.style.transform=`scaleX(${1-S.t/MAX_T})`; }
+  raf=requestAnimationFrame(tick);
+}
+async function recognized(timeout=false){
+  if(S.phase!=="playing") return;
+  cancelAnimationFrame(raf); stopSong(); if(S.source==="spotify") SP.pause();
+  S.stopT=S.t; S.phase="wait";
+  S.opts=await S.optsP;
+  if(timeout){ S.phase="reveal"; S.pick=null; S.timeout=true; S.gain=0; S.quip=pick(SLOW); render(); return; }
+  S.timeout=false; S.phase="choose"; render();
+}
+function choose(i){
+  if(S.phase!=="choose") return;
+  const song=S.deck[S.round], ok=S.opts[i]===song, p=current();
+  S.pick=i; S.gain= ok ? ptsFor(S.stopT) : 0;
+  S.scores[p]+=S.gain; S.quip=pick(ok?CHEERS:FAILS);
+  if(ok) setTimeout(()=>confetti(S.gain>700?180:90),50);
+  if(ok && (S.best[p]===null || S.stopT<S.best[p].t)) S.best[p]={t:S.stopT, title:song.title};
+  S.phase="reveal"; render();
+}
+function next(){
+  S.round++;
+  S.phase = S.round>=S.total ? "end" : "ready";
+  render();
+  if(S.phase==="end") setTimeout(()=>confetti(260),100);
+}
+
+// ---------- Darstellung ----------
+function header(){
+  const inGame=S.phase!=="setup";
+  return `<div class="brand"><div class="disc" aria-hidden="true"></div><div>
+    <div class="eyebrow">${inGame && S.phase!=="end" ? `Runde ${S.round+1} von ${S.total}` : "Musik-Ratespiel"}</div>
+    <h1>Song-Blitz</h1></div></div>
+  ${inGame && S.phase!=="end" ? `<div class="scores">${S.names.map((n,i)=>`<div class="chip ${i===current()?"active":""}"><span>${esc(n)}</span><span class="pts">${S.scores[i]}</span></div>`).join("")}</div>` : ""}`;
+}
+
+function musicPanel(){
+  if(S.source==="demo") return `<div class="panel">
+    <div class="eyebrow">Musik</div>
+    <p class="muted" style="margin:0">Demo-Modus: erfundene Melodien mit Fantasie-Titeln.</p>
+    <button class="ghost" id="useSp">Mit Spotify spielen</button></div>`;
+  let body="";
+  if(!SP.loggedIn()){
+    body=`${CONFIG.clientId?"":`<label class="field" for="cid"><span class="eyebrow">Spotify Client-ID</span>
+        <input id="cid" value="${esc(S.clientId)}" placeholder="aus dem Spotify Developer Dashboard" autocomplete="off" spellcheck="false"></label>`}
+      <button class="big" id="login">Mit Spotify verbinden</button>
+      <p class="muted" style="margin:0;font-size:14px">Zum Abspielen braucht es Spotify Premium.</p>`;
+  } else {
+    const dev = SP.deviceId ? `<span class="pill ok">Abspielgerät bereit</span>` : `<span class="pill ${SP.playerMsg&&!SP.sdkLoading?"no":""}">${esc(SP.playerMsg||"Abspielgerät verbindet …")}</span>`;
+    body=`<div class="statusrow"><span class="pill ok">Mit Spotify verbunden</span>${dev}</div>
+      <label class="field" for="pl"><span class="eyebrow">Playlist-Link</span>
+        <input id="pl" value="${esc(S.playlist)}" placeholder="https://open.spotify.com/playlist/…" autocomplete="off" spellcheck="false"></label>
+      <button class="big" id="loadPl" ${SP.loading?"disabled":""}>${SP.songs.length?"Playlist neu laden":"Playlist laden"}</button>
+      ${SP.loadMsg?`<p style="margin:0" class="${SP.songs.length?"":"muted"}">${esc(SP.loadMsg)}</p>`:""}
+      <p class="muted" style="margin:0;font-size:14px">Tipp: Schliesst die Spotify-App auf anderen Geräten, sonst steht dort der Songtitel.</p>
+      <button class="ghost" id="logout">Von Spotify abmelden</button>`;
+  }
+  return `<div class="panel"><div class="eyebrow">Musik</div>${body}
+    ${SP.authMsg?`<p class="err">${esc(SP.authMsg)}</p>`:""}
+    <button class="link" id="useDemo">Lieber die Demo ohne Spotify</button></div>`;
+}
+
+function render(){
+  const a=document.activeElement, fid=a&&a.id&&a.tagName==="INPUT"?a.id:null, sel=fid?a.selectionStart:null;
+  document.body.classList.toggle("playing", S.phase==="playing"||S.phase==="loading");
+  let html=header();
+  if(S.phase==="setup"){
+    const blocked = S.source==="spotify" && !spotifyReady();
+    html+=`<div class="panel">
+      <h2>Wer spielt mit?</h2>
+      <div class="players">${S.players.map((n,i)=>`<div class="prow">
+        <input id="p${i}" value="${esc(n)}" aria-label="Name Spieler ${i+1}" data-i="${i}" maxlength="20">
+        ${S.players.length>1?`<button class="icon-btn" data-del="${i}" aria-label="Spieler entfernen">×</button>`:""}</div>`).join("")}</div>
+      ${S.players.length<8?`<button class="ghost" id="add">+ Spieler hinzufügen</button>`:""}
+    </div>
+    <div class="panel">
+      <div class="eyebrow">Runden pro Spieler</div>
+      <div class="stepper"><button class="icon-btn" id="minus" aria-label="Weniger">−</button>
+        <span class="val">${S.perPlayer}</span>
+        <button class="icon-btn" id="plus" aria-label="Mehr">+</button>
+        <span class="muted">= ${S.perPlayer*S.players.length} Runden insgesamt</span></div>
+    </div>
+    ${musicPanel()}
+    <button class="big" id="go" ${blocked?"disabled":""}>Spiel starten</button>
+    ${blocked?`<p class="muted" style="margin:0;text-align:center;font-size:14px">Verbinde Spotify und lade eure Playlist, dann geht's los.</p>`:""}`;
+  }
+  else if(S.phase==="ready"){
+    html+=`<div class="panel stage">
+      <div class="eyebrow">Du bist dran</div>
+      <h2>${esc(S.names[current()])}</h2>
+      <p class="muted">Je schneller du den Song erkennst, desto mehr Punkte: 1000 am Anfang, nach ${MAX_T} Sekunden nur noch 100. Falsch geraten gibt 0.</p>
+      ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+      <button class="big" id="play">▶ Song abspielen</button></div>`;
+  }
+  else if(S.phase==="loading"){
+    html+=`<div class="panel stage"><div class="eyebrow">${esc(S.names[current()])} macht sich bereit</div>
+      <h2>Song wird geladen …</h2><p class="muted">Gleich geht's los. Ohren spitzen!</p></div>`;
+  }
+  else if(S.phase==="playing"){
+    html+=`<div class="panel stage">
+      <div class="eyebrow">${esc(S.names[current()])} hört zu</div>
+      ${floorHTML()}
+      <div class="clock" id="clock">0.0</div>
+      <div class="bar"><i id="barfill"></i></div>
+      <div class="worth" id="worth">gerade <b>1000</b> Punkte wert</div>
+      <button class="big hot" id="got">Erkannt!</button></div>`;
+  }
+  else if(S.phase==="wait"){
+    html+=`<div class="panel stage"><div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s</div><h2>Antworten werden gemischt …</h2></div>`;
+  }
+  else if(S.phase==="choose"){
+    html+=`<div class="panel stage">
+      <div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s · ${ptsFor(S.stopT)} Punkte möglich</div>
+      <h2>Welcher Song war das?</h2>
+      <div class="options">${S.opts.map((o,i)=>`<button class="opt" data-opt="${i}">${esc(o.title)}</button>`).join("")}</div></div>`;
+  }
+  else if(S.phase==="reveal"){
+    const song=S.deck[S.round], ok=S.pick!==null && S.opts[S.pick]===song;
+    html+=`<div class="panel stage">
+      <div class="mood" aria-hidden="true">${ok?"🦆":"🐢"}</div>
+      <div class="verdict ${ok?"ok":"no"}">${S.timeout?"Zeit abgelaufen":ok?`+${S.gain} Punkte`:"Leider falsch · 0 Punkte"}</div>
+      <p class="muted" style="margin:0">${esc(S.quip)}</p>
+      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":i===S.pick?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
+      <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
+        <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
+      <button class="big" id="next">${S.round+1>=S.total?"Zur Rangliste":`Weiter: ${esc(S.names[(S.round+1)%S.names.length])} ist dran`}</button></div>`;
+  }
+  else if(S.phase==="end"){
+    const order=S.names.map((n,i)=>({n,s:S.scores[i],b:S.best[i]})).sort((a,b)=>b.s-a.s);
+    html+=`<div class="stage"><div class="eyebrow">Nach ${S.total} Runden</div><h2>${esc(order[0].n)} gewinnt!</h2></div>
+      <ol class="rank">${order.map((o,i)=>`<li><span class="pos">${i+1}</span>
+        <span class="name">${esc(o.n)}<br><span class="muted" style="font-weight:500;font-size:14px">${o.b?`Schnellster Treffer: ${o.b.t.toFixed(1)} s (${esc(o.b.title)})`:"Kein Treffer"}</span></span>
+        <span class="pts">${o.s}</span></li>`).join("")}</ol>
+      <button class="big" id="again">Nochmal spielen</button>
+      <button class="ghost" id="setup" style="align-self:center">Spieler ändern</button>`;
+  }
+  app.innerHTML=html;
+  bind();
+  if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{ e.setSelectionRange(sel,sel) }catch(_){} } }
+}
+
+function bind(){
+  const $=id=>document.getElementById(id), on=(id,f)=>{ const e=$(id); if(e) e.onclick=f; };
+  app.querySelectorAll(".prow input").forEach(inp=>inp.addEventListener("input",e=>{ S.players[+e.target.dataset.i]=e.target.value; saveSettings(); }));
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ S.players.splice(+b.dataset.del,1); saveSettings(); render(); });
+  on("add",()=>{ S.players.push(`Spieler ${S.players.length+1}`); render(); $(`p${S.players.length-1}`)?.select(); });
+  on("minus",()=>{ S.perPlayer=Math.max(1,S.perPlayer-1); render(); });
+  on("plus",()=>{ S.perPlayer=Math.min(20,S.perPlayer+1); render(); });
+  $("cid")&&$("cid").addEventListener("input",e=>{ S.clientId=e.target.value.trim(); saveSettings(); });
+  $("pl")&&$("pl").addEventListener("input",e=>{ S.playlist=e.target.value.trim(); saveSettings(); });
+  $("pl")&&$("pl").addEventListener("keydown",e=>{ if(e.key==="Enter") SP.loadPlaylist(S.playlist); });
+  on("login",()=>{ SP.authMsg=""; saveSettings(); SP.login(); });
+  on("loadPl",()=>SP.loadPlaylist(S.playlist));
+  on("logout",()=>{ SP.logout(); render(); });
+  on("useSp",()=>{ S.source="spotify"; saveSettings(); if(SP.loggedIn()){ SP.loadSDK(); if(S.playlist && !SP.songs.length) SP.loadPlaylist(S.playlist); } render(); });
+  on("useDemo",()=>{ S.source="demo"; saveSettings(); render(); });
+  on("go",startGame);
+  on("play",play);
+  on("got",()=>recognized(false));
+  app.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>choose(+b.dataset.opt));
+  on("next",next);
+  on("again",()=>{ S.players=[...S.names]; startGame(); });
+  on("setup",()=>{ S={...S, phase:"setup", players:[...S.names]}; render(); });
+}
+document.addEventListener("keydown",e=>{ if(e.code==="Space" && S.phase==="playing"){ e.preventDefault(); recognized(false); } });
+
+(async()=>{
+  try{ await SP.handleRedirect() }catch(e){ SP.authMsg=e.message }
+  if(SP.loggedIn() && S.source==="spotify"){ SP.loadSDK(); if(S.playlist) SP.loadPlaylist(S.playlist); }
+  render();
+})();
+
+</script>
+</body>
+</html>
