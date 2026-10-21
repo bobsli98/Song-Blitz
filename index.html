@@ -802,9 +802,19 @@ async function recognized(timeout=false, who=null){
   if(timeout){
     if(!isBuzz()) S.streak[current()]=0;
     S.phase="reveal"; S.pick=null; S.timeout=true; S.gain=0; S.reactor=isBuzz()?null:current(); S.happy=false;
-    S.quip=pick(SLOW); SFX.play("sleepy"); render(); return;
+    S.quip=pick(SLOW); SFX.play("sleepy"); render(); setTimeout(resumeMusic,700); return;
   }
   S.timeout=false; S.phase="choose"; render();
+}
+// Nach der Antwort läuft der Song weiter, bis man auf "Weiter" klickt
+function resumeMusic(){
+  if(S.source==="spotify"){ try{ SP.player && SP.player.resume() }catch(e){} }
+  else S.bpm=playSong(S.deck[S.round]);
+  S.musicOn=true;
+}
+function stopMusic(){
+  stopSong(); if(S.source==="spotify") SP.pause();
+  S.musicOn=false;
 }
 function resumeBonus(){
   const song=S.deck[S.round];
@@ -842,9 +852,10 @@ function choose(i){
   S.scores[p]+=S.gain+S.streakGain;
   S.quip=pick(ok?CHEERS:FAILS); S.reactor=p; S.happy=ok;
   SFX.play(ok ? (S.streakGain?"fire":"right") : "wrong");
-  S.phase="reveal"; render();
+  S.phase="reveal"; render(); setTimeout(()=>{ if(S.phase==="reveal") resumeMusic(); },700);
 }
 function next(){
+  stopMusic();
   if(kind()==="solo") S.turn++;
   S.round++;
   if(S.round>=S.total){ startCeremony(); return; }
@@ -1026,7 +1037,8 @@ function render(){
         <p class="muted" style="margin:0">${esc(S.quip)}</p>${bz&&S.locked.length?`<p class="flash" style="font-size:14px">${S.locked.map(j=>`${S.ani[j]} ${esc(S.names[j])} −${BONUS_PENALTY}`).join(" · ")}</p>`:""}</div></div>
       <div class="revgrid">
         <div class="songcard">${song.cover?`<img class="cover" src="${esc(song.cover)}" alt="">`:""}<div>
-          <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span></div></div>
+          <span class="eyebrow">Das war</span><b>${esc(song.title)}</b><span class="muted">${esc(song.artist)} · ${esc(song.album)}</span>
+          <button class="link" id="music">⏸ Musik stoppen</button></div></div>
         <div class="options">${S.opts.map((o,i)=>`<button class="opt ${o===song?"right":(i===S.pick||S.wrongPicks.includes(i))?"wrong":""}" disabled>${esc(o.title)}</button>`).join("")}</div>
       </div>
       <button class="big" id="next">${S.round+1>=S.total?"Zur Siegerehrung":nextLabel()}</button></div>`;
@@ -1080,8 +1092,9 @@ function bind(){
   app.querySelectorAll("[data-buzz]").forEach(b=>b.onclick=()=>recognized(false,+b.dataset.buzz));
   app.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>choose(+b.dataset.opt));
   on("next",next);
+  on("music",()=>{ if(S.musicOn) stopMusic(); else resumeMusic(); const m=$("music"); if(m) m.textContent=S.musicOn?"⏸ Musik stoppen":"▶ Weiterhören"; });
   on("again",()=>startGame());
-  on("setup",()=>{ clearTimeout(S.cerT); S={...S, phase:"setup"}; render(); });
+  on("setup",()=>{ clearTimeout(S.cerT); stopMusic(); S={...S, phase:"setup"}; render(); });
 }
 document.addEventListener("keydown",e=>{
   if(S.phase!=="playing" || e.target.tagName==="INPUT") return;
