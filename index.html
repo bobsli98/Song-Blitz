@@ -302,7 +302,7 @@ body.ingame .brand{text-align:left}
 .p3 .block{height:56px;background:color-mix(in srgb, var(--accent) 55%, var(--surface))}
 @keyframes rise{from{transform:translateY(70px);opacity:0}to{transform:none;opacity:1}}
 .rest{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,250px));justify-content:center;gap:8px}
 .award{padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:1px;min-width:0}
 .award b{font-size:14px}
 .award span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
@@ -313,6 +313,26 @@ body.ingame .brand{text-align:left}
 .snd{margin-left:auto;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);font-size:18px;background:var(--surface);flex:none}
 body.ingame .snd{margin-left:8px}
 @media (prefers-reduced-motion:reduce){.react,.react *,.pod,.pani,.drumanim,.swords{animation:none!important}}
+#toasts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:60;pointer-events:none;width:min(92vw,440px)}
+.toast{display:flex;gap:10px;align-items:center;padding:10px 16px;border-radius:14px;background:var(--ink);color:var(--bg);font-weight:700;box-shadow:0 10px 28px rgba(0,0,0,.25);animation:tin .4s cubic-bezier(.2,.9,.3,1.3)}
+.toast .ti{font-size:24px;line-height:1}
+.toast.out{opacity:0;transform:translateY(-10px);transition:opacity .4s,transform .4s}
+@keyframes tin{from{transform:translateY(-24px) scale(.9);opacity:0}}
+.jokers{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+.joker{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 16px;border-radius:12px;border:1px dashed var(--hot);font-weight:700;background:var(--surface)}
+.joker small{font-weight:500;font-size:12px;color:var(--muted)}
+.joker:hover:not(:disabled){border-style:solid}
+.joker.armed{background:var(--hot);color:var(--hot-ink);border-style:solid;animation:wiggle .35s ease-in-out infinite alternate}
+.joker.armed small{color:var(--hot-ink)}
+.joker:disabled{opacity:.45;cursor:default}
+.jhint{font-size:13px;color:var(--muted)}
+@keyframes wiggle{from{transform:rotate(-2deg)}to{transform:rotate(2deg)}}
+.opt.gone{opacity:.25;text-decoration:line-through}
+.records{display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:8px}
+.record{padding:6px 14px;border-radius:999px;background:var(--hot);color:var(--hot-ink);font-weight:700;font-size:14px;animation:pop .6s ease-out}
+.famehead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.famerow{display:flex;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.toast,.joker.armed,.record{animation:none}}
 </style>
 </head>
 <body>
@@ -699,6 +719,7 @@ const SFX={
   right(t){ [1047,1319,1568,2093].forEach((f,i)=>this.tone("triangle",f,f,t+i*0.07,0.22,0.3)); },
   wrong(t){ [[311,294],[294,277],[277,220]].forEach(([a,b],i)=>this.tone("sawtooth",a,b,t+i*0.26,i===2?0.6:0.24,0.22,["lowpass",900])); },
   fire(t){ this.noise(t,0.5,0.4,"bandpass",400,3500); this.right(t+0.25); },
+  ding(t){ this.tone("sine",1568,1568,t,0.15,0.18); this.tone("sine",2093,2093,t+0.08,0.25,0.15); },
   sleepy(t){ this.tone("triangle",440,200,t,0.7,0.25); },
   drumroll(t){ for(let i=0;i<40;i++){ const d=i*0.05; this.noise(t+d,0.06,0.08+0.25*i/40,"bandpass",900,700); }
     this.noise(t+2.05,1.4,0.5,"highpass",5000); this.tone("sine",110,50,t+2.05,0.4,0.6); },
@@ -729,6 +750,7 @@ function makePairs(n,total){
 }
 const duelRounds=()=>Math.max(1,Math.ceil(S.players.length*S.perPlayer/2));
 function startGame(){
+  S.fameDone=false;
   const names=S.players.map((n,i)=>n.trim()||`Spieler ${i+1}`);
   if(!names.length) return;
   if(S.source==="spotify" && !spotifyReady()) return;
@@ -752,7 +774,8 @@ function startGame(){
   const z=()=>names.map(()=>0);
   S={...S, phase:"ready", names, scores:z(), streak:z(), best:names.map(()=>null),
      stats:names.map(()=>({right:0,wrong:0,fouls:0,times:[],maxStreak:0})),
-     round:0, turn:0, total, deck:deck.slice(0,total), kinds, pairs, err:null};
+     round:0, turn:0, total, deck:deck.slice(0,total), kinds, pairs, err:null,
+     jokers:names.map(()=>({half:true,double:true})), ach:names.map(()=>[]), armed:false, hidden:[], records:[]};
   render();
 }
 const kind=()=>(S.kinds && S.kinds[S.round]) || "solo";
@@ -776,7 +799,7 @@ async function optionsFor(song){
 async function play(){
   const song=S.deck[S.round];
   S.optsP=optionsFor(song); S.opts=null;
-  S.err=null; S.locked=[]; S.wrongPicks=[]; S.buzzer=null; S.flash=null; S.streakGain=0;
+  S.err=null; S.locked=[]; S.wrongPicks=[]; S.buzzer=null; S.flash=null; S.streakGain=0; S.hidden=[]; S.doubled=false;
   SFX.ac();
   if(S.source==="spotify"){
     S.phase="loading"; const p=SP.play(song); render();
@@ -826,7 +849,8 @@ function resumeBonus(){
 function choose(i){
   if(S.phase!=="choose" || S.wrongPicks.includes(i)) return;
   const song=S.deck[S.round], ok=S.opts[i]===song, p=scorer(), st=S.stats[p];
-  S.streakGain=0;
+  const leaderBefore=leader(), doubled=S.armed && !isBuzz();
+  S.streakGain=0; S.doubled=doubled; S.armed=false;
   if(!ok){
     st.wrong++; S.streak[p]=0;
     if(isBuzz()){
@@ -841,7 +865,8 @@ function choose(i){
       if(others.length){ SFX.play("wrong"); S.flash+=" Weiter raten!"; resumeBonus(); return; }
     }
   }
-  S.pick=i; S.gain= ok ? ptsFor(S.stopT) : 0;
+  S.pick=i; S.gain= ok ? ptsFor(S.stopT)*(doubled?2:1) : 0;
+  if(!ok && doubled){ S.scores[p]-=DOUBLE_RISK; setTimeout(()=>toast("🎲",`Zu hoch gepokert! ${S.names[p]} verliert ${DOUBLE_RISK}`),400); }
   if(ok){
     st.right++; st.times.push(S.stopT);
     S.streak[p]++; st.maxStreak=Math.max(st.maxStreak,S.streak[p]);
@@ -850,18 +875,52 @@ function choose(i){
     setTimeout(()=>confetti(S.gain>700?180:90),50);
   }
   S.scores[p]+=S.gain+S.streakGain;
+  if(ok){ // Abzeichen
+    const nm=`${S.ani[p]} ${S.names[p]}`;
+    if(S.stopT<2) badge(p,"⚡","Blitzstart",`${nm} in ${S.stopT.toFixed(1)} s!`);
+    if(S.stopT>25) badge(p,"🧊","Eiskalt",`${nm} kurz vor Schluss!`);
+    if(S.streak[p]===3) badge(p,"🎩","Hattrick",`${nm}: drei in Folge!`);
+    if(S.streak[p]===5) badge(p,"🌋","Unaufhaltsam",`${nm}: fünf in Folge!`);
+    if(doubled) badge(p,"🎲","Mutig belohnt",`${nm} verdoppelt!`);
+  }
+  const lead=leader();
+  if(lead!==null && lead!==leaderBefore && S.round>0) setTimeout(()=>toast("👑",`Führungswechsel! ${S.ani[lead]} ${S.names[lead]} führt`),900);
   S.quip=pick(ok?CHEERS:FAILS); S.reactor=p; S.happy=ok;
   SFX.play(ok ? (S.streakGain?"fire":"right") : "wrong");
   S.phase="reveal"; render(); setTimeout(()=>{ if(S.phase==="reveal") resumeMusic(); },700);
 }
 function next(){
-  stopMusic();
+  stopMusic(); S.armed=false;
   if(kind()==="solo") S.turn++;
   S.round++;
   if(S.round>=S.total){ startCeremony(); return; }
   S.phase="ready"; render();
 }
+const DOUBLE_RISK=300;
+function leader(){
+  const m=Math.max(...S.scores); if(m<=0) return null;
+  const w=S.scores.map((v,i)=>v===m?i:-1).filter(i=>i>=0); return w.length===1?w[0]:null;
+}
+function badge(p,icon,title,text){ S.ach[p].push({icon,title}); setTimeout(()=>toast(icon,`${title}! ${text}`),300+S.ach[p].length*150); }
+function toast(icon,text){
+  let box=document.getElementById("toasts");
+  if(!box){ box=document.createElement("div"); box.id="toasts"; box.setAttribute("aria-live","polite"); document.body.appendChild(box); }
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span class="ti" aria-hidden="true">${icon}</span><span>${esc(text)}</span>`;
+  box.appendChild(t); SFX.play("ding");
+  setTimeout(()=>t.classList.add("out"),2800); setTimeout(()=>t.remove(),3300);
+}
+function updateFame(){
+  if(S.fameDone) return; S.fameDone=true;
+  const F=LS.get("sb_fame",null)||{players:{},fastest:null,bestGame:null}, had=!!(F.fastest||F.bestGame), rec=[];
+  S.names.forEach(n=>{ (F.players[n]=F.players[n]||{wins:0,games:0}).games++; });
+  const lead=leader(); if(S.names.length>1 && lead!==null) F.players[S.names[lead]].wins++;
+  S.best.forEach((b,i)=>{ if(b && (!F.fastest || b.t<F.fastest.t)){ F.fastest={name:S.names[i],t:b.t,title:b.title}; if(had) rec.push(`⚡ Schnellster Treffer aller Zeiten: ${S.names[i]} in ${b.t.toFixed(1)} s`); } });
+  S.scores.forEach((v,i)=>{ if(v>0 && (!F.bestGame || v>F.bestGame.points)){ F.bestGame={name:S.names[i],points:v}; if(had) rec.push(`💯 Punkterekord: ${S.names[i]} mit ${v} Punkten`); } });
+  LS.set("sb_fame",F); S.records=[...new Set(rec)];
+}
 function startCeremony(){
+  updateFame();
   S.phase="end"; S.cer=0; render(); SFX.play("drumroll");
   clearTimeout(S.cerT);
   S.cerT=setTimeout(()=>{ if(S.phase!=="end") return; S.cer=1; render(); setTimeout(()=>confetti(280),900); setTimeout(()=>SFX.play("riff"),900); }, SFX.on?2100:900);
@@ -879,11 +938,29 @@ function awards(){
   const slow=P.filter(p=>p.st.times.length && (!fast||p.i!==fast.i)).sort((x,y)=>avg(y)-avg(x))[0];
   if(slow && P.length>1 && avg(slow)>=4) out.push(["🐢","Gemütlichstes Ohr",who(slow),`im Schnitt ${avg(slow).toFixed(1)} s`]);
   const brave=P.filter(p=>p.st.wrong>=2).sort((x,y)=>y.st.wrong-x.st.wrong)[0];
+  const col=P.filter(p=>S.ach[p.i].length>=2).sort((x,y)=>S.ach[y.i].length-S.ach[x.i].length)[0];
+  if(col) out.unshift(["🏅","Abzeichen-Sammler",who(col),S.ach[col.i].map(a=>a.icon).join(" ")]);
   if(brave && !foul) out.push(["🤷","Mutigster Rater",who(brave),`${brave.st.wrong}× daneben`]);
   return out.slice(0,4);
 }
 
 // ---------- Darstellung ----------
+function jokerRow(c){
+  const J=S.jokers[c];
+  return `<div class="jokers">
+    <button class="joker ${S.armed?"armed":""}" id="dbl" ${!J.double&&!S.armed?"disabled":""}>🎲 Doppelt oder nichts
+      <small>${S.armed?`aktiv: richtig ×2, falsch −${DOUBLE_RISK}`:J.double?"1× pro Spiel":"schon benutzt"}</small></button>
+    <span class="jhint">🎯 50:50 ${J.half?"noch verfügbar":"benutzt"}</span></div>`;
+}
+function famePanel(){
+  const F=LS.get("sb_fame",null);
+  if(!F || !Object.keys(F.players||{}).length) return "";
+  const top=Object.entries(F.players).sort((a,b)=>b[1].wins-a[1].wins||b[1].games-a[1].games).slice(0,5);
+  return `<div class="panel fame"><div class="famehead"><span class="eyebrow">🏆 Ruhmeshalle</span>
+      <button class="link" id="fameReset">${S.fameConfirm?"Wirklich alles löschen?":"Zurücksetzen"}</button></div>
+    <div class="famerow">${top.map(([n,v])=>`<span class="chip"><span>${esc(n)}</span><span class="pts">${v.wins} ${v.wins===1?"Sieg":"Siege"} · ${v.games} ${v.games===1?"Spiel":"Spiele"}</span></span>`).join("")}</div>
+    <p class="muted" style="margin:0;font-size:14px">${[F.fastest?`⚡ Schnellster Treffer: ${esc(F.fastest.name)}, ${F.fastest.t.toFixed(1)} s («${esc(F.fastest.title)}»)`:"",F.bestGame?`💯 Punkterekord: ${esc(F.bestGame.name)}, ${F.bestGame.points}`:""].filter(Boolean).join(" · ")}</p></div>`;
+}
 function nextLabel(){
   const nk=S.kinds[S.round+1];
   if(nk==="bonus") return "Weiter zur Bonusrunde";
@@ -968,7 +1045,8 @@ function render(){
     </div></div>
     <div class="col">${musicPanel()}</div></div>
     <button class="big" id="go" ${blocked?"disabled":""}>Spiel starten</button>
-    ${blocked?`<p class="muted" style="margin:0;text-align:center;font-size:14px">Verbinde Spotify und lade eure Playlist, dann geht's los.</p>`:""}`;
+    ${blocked?`<p class="muted" style="margin:0;text-align:center;font-size:14px">Verbinde Spotify und lade eure Playlist, dann geht's los.</p>`:""}
+    ${famePanel()}`;
   }
   else if(S.phase==="ready" && kind()==="duel"){
     const [a,b]=S.pairs[S.round];
@@ -994,6 +1072,7 @@ function render(){
       <h2><span class="bigani" aria-hidden="true">${S.ani[c]}</span> ${esc(S.names[c])}</h2>
       ${sk>=2?`<p class="fire">🔥 ${sk} richtig in Folge! Der nächste Treffer bringt +${streakBonus(sk+1)} Extra-Punkte.</p>`
         :`<p class="muted">Je schneller du den Song erkennst, desto mehr Punkte: 1000 am Anfang, nach ${MAX_T} Sekunden nur noch 100. Ab dem dritten Treffer in Folge gibt's Extra-Punkte.</p>`}
+      ${jokerRow(c)}
       ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
       <button class="big" id="play">▶ Song abspielen</button></div>`;
   }
@@ -1021,13 +1100,16 @@ function render(){
     html+=`<div class="panel stage ${isBuzz()?"bonus":""}">
       <div class="eyebrow">Gestoppt bei ${S.stopT.toFixed(1)} s · ${ptsFor(S.stopT)} Punkte möglich</div>
       <h2>${isBuzz()?`${S.ani[S.buzzer]} ${esc(S.names[S.buzzer])}, welcher Song war das?`:"Welcher Song war das?"}</h2>
-      <div class="options">${S.opts.map((o,i)=>`<button class="opt ${S.wrongPicks.includes(i)?"wrong":""}" data-opt="${i}" ${S.wrongPicks.includes(i)?"disabled":""}>${esc(o.title)}</button>`).join("")}</div></div>`;
+      ${S.doubled||S.armed&&!isBuzz()?`<p class="fire">🎲 Doppelt oder nichts ist aktiv!</p>`:""}
+      <div class="options">${S.opts.map((o,i)=>{ const off=S.wrongPicks.includes(i)||S.hidden.includes(i);
+        return `<button class="opt ${S.wrongPicks.includes(i)?"wrong":""} ${S.hidden.includes(i)?"gone":""}" data-opt="${i}" ${off?"disabled":""}>${esc(o.title)}</button>`; }).join("")}</div>
+      ${S.jokers[scorer()].half && !S.hidden.length ? `<div class="jokers"><button class="joker" id="half">🎯 50:50<small>zwei falsche Antworten weg · 1× pro Spiel</small></button></div>`:""}</div>`;
   }
   else if(S.phase==="reveal"){
     const song=S.deck[S.round], ok=S.pick!==null && S.opts[S.pick]===song, bz=isBuzz();
     const verdict = S.timeout ? (bz?"Niemand hat's erkannt":"Zeit abgelaufen")
-      : ok ? (bz?`+${S.gain} Punkte für ${esc(S.names[S.buzzer])}`:`+${S.gain} Punkte`)
-      : (bz?"Alle lagen falsch":"Leider falsch · 0 Punkte");
+      : ok ? (bz?`+${S.gain} Punkte für ${esc(S.names[S.buzzer])}`:`+${S.gain} Punkte${S.doubled?" 🎲×2":""}`)
+      : (bz?"Alle lagen falsch":S.doubled?`Leider falsch · −${DOUBLE_RISK} 🎲`:"Leider falsch · 0 Punkte");
     const face = S.reactor!=null ? S.ani[S.reactor] : "🦔";
     const mood = S.timeout ? "sleepy" : ok ? "happy" : "sad";
     html+=`<div class="panel stage ${bz?"bonus":""}">
@@ -1051,7 +1133,8 @@ function render(){
     const order=S.names.map((n,i)=>({n,a:S.ani[i],s:S.scores[i]})).sort((a,b)=>b.s-a.s).map((o,k)=>({...o,rank:k+1}));
     const pod=[order[1],order[0],order[2]].filter(Boolean);
     const aw=awards();
-    html+=`<div class="stage"><h2>${order[0].a} ${esc(order[0].n)} gewinnt!</h2></div>
+    html+=`<div class="stage"><h2>${order[0].a} ${esc(order[0].n)} gewinnt!</h2>
+      ${S.records.length?`<div class="records">${S.records.map(r=>`<div class="record">Neuer Rekord! ${esc(r)}</div>`).join("")}</div>`:""}</div>
       <div class="podium">${pod.map(o=>`<div class="pod p${o.rank}"><div class="pani ${o.rank===1?"happy":""}" aria-hidden="true">${o.a}</div>
         <div class="pname">${esc(o.n)}</div><div class="ppts">${o.s} Pkt.</div><div class="block"><span>${o.rank}</span></div></div>`).join("")}</div>
       ${order.length>3?`<div class="rest">${order.slice(3).map(o=>`<div class="chip"><span>${o.rank}. ${o.a} ${esc(o.n)}</span><span class="pts">${o.s}</span></div>`).join("")}</div>`:""}
@@ -1092,6 +1175,10 @@ function bind(){
   app.querySelectorAll("[data-buzz]").forEach(b=>b.onclick=()=>recognized(false,+b.dataset.buzz));
   app.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>choose(+b.dataset.opt));
   on("next",next);
+  on("dbl",()=>{ const J=S.jokers[current()]; if(S.armed){ S.armed=false; J.double=true; } else if(J.double){ S.armed=true; J.double=false; SFX.play("ding"); } render(); });
+  on("half",()=>{ const J=S.jokers[scorer()]; if(!J.half) return; J.half=false;
+    const song=S.deck[S.round]; S.hidden=shuffle(S.opts.map((o,i)=>i).filter(i=>S.opts[i]!==song && !S.wrongPicks.includes(i))).slice(0,2); SFX.play("ding"); render(); });
+  on("fameReset",()=>{ if(S.fameConfirm){ LS.del("sb_fame"); S.fameConfirm=false; } else S.fameConfirm=true; render(); });
   on("music",()=>{ if(S.musicOn) stopMusic(); else resumeMusic(); const m=$("music"); if(m) m.textContent=S.musicOn?"⏸ Musik stoppen":"▶ Weiterhören"; });
   on("again",()=>startGame());
   on("setup",()=>{ clearTimeout(S.cerT); stopMusic(); S={...S, phase:"setup"}; render(); });

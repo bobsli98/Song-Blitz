@@ -19,6 +19,9 @@ Die Client-ID kann auch fest in `index.html` bei `CONFIG.clientId` eingetragen w
 - **Reihum:** Jeder rät allein, etwa jede fünfte Runde ist eine Bonusrunde für alle.
 - **Duell:** Immer zwei Spieler gegeneinander mit eigenem Buzzer (Tasten = Spielernummer).
 - **Serien-Bonus:** Ab dem 3. Treffer in Folge +100, +200, max. +300 Extra-Punkte.
+- **Joker (je 1× pro Spiel):** 🎲 *Doppelt oder nichts* vor dem Song (richtig ×2, falsch −300) und 🎯 *50:50* beim Antworten.
+- **Abzeichen & Führungswechsel:** Einblendungen für Blitzstart (< 2 s), Eiskalt (> 25 s), Hattrick, Unaufhaltsam und neue Führung.
+- **Ruhmeshalle:** Siege, schnellster Treffer und Punkterekord werden im Browser gespeichert und auf der Startseite gezeigt.
 - **Siegerehrung** mit Trommelwirbel, Podest und Auszeichnungen. Soundeffekte lassen sich oben über 🔊 ausschalten.
 
 ## Hinweise
